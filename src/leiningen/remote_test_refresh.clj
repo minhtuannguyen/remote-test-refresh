@@ -46,7 +46,7 @@
                           (map :step))]
     (if (empty? failed-steps)
       (m/info "* Change has been transfered successfully")
-      (m/info "* transfer-per-ssh failed in:" failed-steps))))
+      (m/info "* Transfer per SSH failed in:" failed-steps))))
 
 (defn sync-code-change
   ([dirs options]
