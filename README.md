@@ -1,5 +1,11 @@
 # remote-test-refresh
 
+[![Build Status](https://travis-ci.org/minhtuannguyen/remote-test-refresh.svg?branch=master)](https://travis-ci.org/minhtuannguyen/remote-test-refresh)
+[![Dependencies Status](http://jarkeeper.com/minhtuannguyen/remote-test-refresh/status.svg)](http://jarkeeper.com/minhtuannguyen/remote-test-refresh)
+
+
+[![Clojars Project](http://clojars.org/minhtuannguyen/remote-test-refresh/latest-version.svg)](https://clojars.org/minhtuannguyen/remote-test-refresh)
+
 `remote-test-refresh` synchronizes automatically with remote project over ssh when files change. When running, `remote-test-refresh` will scan for all source and test resources defined in the project.cls. When detecting change, `remote-test-refresh` will transfer the diff per ssh and apply it to the to the remote repository.
 
 To define the remote repository, you can define `:remote-test` in the source project.cls or in your .lein/profiles.clj.
