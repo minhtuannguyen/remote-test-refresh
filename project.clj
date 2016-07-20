@@ -1,11 +1,8 @@
-(defproject minhtuannguyen/remote-test-refresh "0.1.0-SNAPSHOT"
+(defproject minhtuannguyen/remote-test-refresh "0.1.0"
   :description "Automatically synchronize with remote project over ssh  when files change"
-  :url ""
+  :url "https://github.com/minhtuannguyen/remote-test-refresh"
   :license {:name "Eclipse Public License" :url "http://www.eclipse.org/legal/epl-v10.html"}
-
   :eval-in-leiningen true
-
-  :aliases {"test-refresh" ["do" ["cljfmt" "fix"] "test-refresh"]}
 
   :dependencies [[org.clojure/tools.namespace "0.2.11" :exclusions [org.clojure/clojure]]
                  [clj-ssh "0.5.14"]]
