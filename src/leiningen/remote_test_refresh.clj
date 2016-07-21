@@ -3,6 +3,7 @@
             [clojure.tools.namespace.track :as t]
             [clojure.string :as str]
             [leiningen.core.main :as m]
+            [leiningen.remote.utils.utils :as u]
             [clojure.java.shell :as sh]))
 
 ;;; Transfer steps
@@ -96,6 +97,7 @@
      (recur dirs option new-tracker))))
 
 (defn remote-test-refresh [project & _]
+  (m/info "Remote-Test-Refresh Version:" (u/artifact-version))
   (sync-code-change
    (determin-asset-paths project)
    (determine-connection-parameter project)))
