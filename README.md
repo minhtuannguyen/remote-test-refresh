@@ -11,16 +11,16 @@
 To define the remote repository, you can define `:remote-test` in the source project.cls or in your .lein/profiles.clj.
 
 ```clojure
-:remote-test {:user  "your-username-on-remote-machine"
-		      :host  "your.host.name-or-ip"
-	          :remote-path "/path/to/parent/folder/of/repo/on/remote/machine"}
+:remote-test {:user         "your-username-on-remote-machine"
+		      :host         "your.host.name-or-ip"
+	          :remote-path  "/path/to/parent/folder/of/repo/on/remote/machine"}
 ```
 
 To start `remote-test-refresh` :
 
     $ lein remote-test-refresh
-    * Change has been transfered successfully
-    * Change has been transfered successfully
+    * Change has been transfered successfully to your remote repo
+    * Change has been transfered successfully to your remote repo
     ...
     
 
@@ -28,4 +28,4 @@ To start `remote-test-refresh` :
 
 Copyright © 2016 
 
-Distributed under the Eclipse Public License either version 1.0 or (at your option) any later version.
+Distributed under the Eclipse Public License either version 1.0.
