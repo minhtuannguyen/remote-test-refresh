@@ -42,14 +42,14 @@
 (defn transfer-per-ssh [option]
   (let [failed-steps (->> [create-patch! upload-patch! apply-patch!]
                           (map #(% option))
-                          (filter #(= :failed (:status %)))
-                          (map :step))]
+                          (filter #(= :failed (:status %))))]
     (if (empty? failed-steps)
       (m/info "* Change has been transfered successfully")
       (m/info "* Transfer per SSH failed in:" failed-steps))))
 
 (defn sync-code-change
   ([dirs options]
+   (m/info "Remote test runs with options:" options)
    (sync-code-change dirs options (apply dir/scan (t/tracker) dirs)))
   ([dirs option old-tracker]
    (let [new-tracker (apply dir/scan old-tracker dirs)]
