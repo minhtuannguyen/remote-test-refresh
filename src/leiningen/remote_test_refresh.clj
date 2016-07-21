@@ -74,7 +74,7 @@
                           (map #(% option))
                           (filter #(= :failed (:status %))))]
     (if (empty? failed-steps)
-      {:status :success :msg "* Change has been transfered successfully"}
+      {:status :success :msg "* Change has been transfered successfully to your remote repo"}
       {:status :failed :msg (str "* Transfer per SSH failed in: " failed-steps)})))
 
 ;;;; Main
@@ -84,7 +84,7 @@
 
 (defn sync-code-change
   ([dirs parameters]
-   (m/info "Remote test runs with parameters:" parameters)
+   (m/info "Remote-Test-Refresh starts with the parameters:" parameters)
    (sync-code-change dirs parameters (apply dir/scan (t/tracker) dirs)))
   ([dirs option old-tracker]
    (let [new-tracker (apply dir/scan old-tracker dirs)]
@@ -97,7 +97,7 @@
      (recur dirs option new-tracker))))
 
 (defn remote-test-refresh [project & _]
-  (m/info "Remote-Test-Refresh Version:" (u/artifact-version))
+  (m/info "Remote-Test-Refresh version:" (u/artifact-version))
   (sync-code-change
    (determin-asset-paths project)
    (determine-connection-parameter project)))
