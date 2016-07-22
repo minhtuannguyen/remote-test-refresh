@@ -62,16 +62,26 @@
       lower-case-path
       (str lower-case-path "/"))))
 
-(defn ssh-parameters [project]
+(defn start-parameters [project]
   (let [project-name (:name project)
         user (or (get-in project [:remote-test :user])
-                 (u/ask-clear-text "* ==> SSH-User:"))
+                 (u/ask-clear-text "* ==> Please enter your ssh user:"))
+
         password (or (get-in project [:remote-test :password])
                      (u/ask-for-password "* ==> SSH-Password:"))
+
         host (or (get-in project [:remote-test :host])
-                 (u/ask-clear-text "* ==> SSH-Host:"))
+                 (u/ask-clear-text
+                  "* ==> Please enter your remote host:"))
+
         path (or (get-in project [:remote-test :remote-path])
-                 (u/ask-clear-text "* ==> Path to parent folder of repository on remote machine:"))]
+                 (u/ask-clear-text
+                  "* ==> Please enter parent folder path of repository on remote machine:"))
+
+        command (or (get-in project [:remote-test :command])
+                    (u/ask-clear-text
+                     "* ==> Which command do you want to run on the repository of remote machine"))]
+
     (assert (not (empty? project-name)) project-name)
     (assert (not (empty? user)) user)
     (assert (not (empty? user)) password)
@@ -81,6 +91,7 @@
      :user        user
      :password    password
      :host        host
+     :command     command
      :remote-path (normalize-remote-path path)}))
 
 (defn find-asset-paths [project]
@@ -106,8 +117,8 @@
        (Thread/sleep WAIT-TIME))
      (recur console session dirs parameters new-tracker))))
 
-(defn run-test-refresh-remotely [{repo :repo path :remote-path} session]
-  (let [output (->> {:cmd (str "cd " path repo ";" "./lein.sh test-refresh;")
+(defn run-test-refresh-remotely [{run-command :command repo :repo path :remote-path} session]
+  (let [output (->> {:cmd (str "cd " path repo ";" run-command ";")
                      :out :stream
                      :pty true}
                     (ssh/ssh session)
@@ -118,7 +129,7 @@
 (defn print-to-console [console]
   (while true
     (let [{msg :msg} (async/<!! console)]
-      (m/info msg))))
+      (m/info "\n" msg "\n"))))
 
 (defn start-remote-routine [session asset-paths parameters]
   (let [console (async/chan)]
@@ -135,7 +146,7 @@
   (m/info "* Remote-Test-Refresh version:" (u/artifact-version))
   (try
     (let [asset-paths (find-asset-paths project)
-          parameters (ssh-parameters project)
+          parameters (start-parameters project)
           agent (ssh/ssh-agent {:use-system-ssh-agent false})
           session (ssh/session agent (:host parameters) (session-option parameters))]
       (m/info "* Starting with the parameters:" (assoc parameters :password "***") "\n")

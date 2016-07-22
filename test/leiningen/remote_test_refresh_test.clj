@@ -28,26 +28,30 @@
             :remote-path "path/"
             :repo        "project"
             :user        "user"
+            :command     "ls"
             :password    "secret"}
 
            (-> {:name        "project"
                 :remote-test {:user        "user"
                               :password    "secret"
                               :host        "host"
+                              :command     "ls"
                               :remote-path "path/"}}
-               (rt/ssh-parameters))))
+               (rt/start-parameters))))
 
     (is (= {:host        "host"
             :password    "secret"
             :remote-path "path/"
+            :command     "ls"
             :repo        "project"
             :user        "user"}
            (-> {:name        "project"
                 :remote-test {:user        "user"
                               :password    "secret"
                               :host        "host"
+                              :command     "ls"
                               :remote-path "path"}}
-               (rt/ssh-parameters))))))
+               (rt/start-parameters))))))
 
 (deftest ^:unit test-transfer-per-ssh
   (testing "check for correct status"
