@@ -5,7 +5,8 @@
   :eval-in-leiningen true
 
   :dependencies [[org.clojure/tools.namespace "0.2.11" :exclusions [org.clojure/clojure]]
-                 [clj-ssh "0.5.14"]]
+                 [clj-ssh "0.5.14"]
+                 [org.clojure/core.async "0.2.385"]]
 
   :profiles {:uberjar {:aot :all}
              :test    {:resource-paths ["test-resources"]}

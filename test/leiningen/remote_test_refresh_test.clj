@@ -54,12 +54,12 @@
     (let [steps [(fn [_ _] {:status :success}) (fn [_ _] {:status :success})]
           option {}
           session {}]
-      (is (= :success (:status (rt/transfer-per-ssh steps option session)))))
+      (is (= :success (:status (rt/transfer-per-ssh option session steps)))))
 
     (let [steps [(fn [_ _] {:status :failed}) (fn [_ _] {:status :success})]
           option {}
           session {}]
-      (is (= :failed (:status (rt/transfer-per-ssh steps option session)))))))
+      (is (= :failed (:status (rt/transfer-per-ssh option session steps)))))))
 
 (deftest ^:unit test-session-option
   (testing "correct session option"

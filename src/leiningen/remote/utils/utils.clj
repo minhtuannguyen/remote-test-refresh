@@ -31,3 +31,8 @@
    (fn [prompt]
      (String/valueOf (.readPassword (System/console) prompt nil)))
    question))
+
+(defn exists? [path]
+  (-> path
+      (io/as-file)
+      (.exists)))

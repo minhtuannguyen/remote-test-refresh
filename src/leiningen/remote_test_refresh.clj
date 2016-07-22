@@ -5,11 +5,12 @@
             [leiningen.core.main :as m]
             [leiningen.remote.utils.utils :as u]
             [clj-ssh.ssh :as ssh]
+            [clojure.core.async :as async]
             [clojure.java.shell :as sh]
             [clojure.java.io :as io]))
 
 ;;; Transfer steps
-
+(def verbose true)
 (def local-patch-file-name "test-refresh-local.patch")
 (def remote-patch-file-name "test-refresh.remote.patch")
 
@@ -21,7 +22,7 @@
             (apply sh/sh)
             (:out)
             (spit local-patch-file-name))
-       (if (.exists (io/as-file local-patch-file-name))
+       (if (u/exists? local-patch-file-name)
          {:step :create-patch :status :success}
          {:step :create-patch :status :failed :error "could not create local patch file"})
        (catch Exception e
@@ -46,7 +47,7 @@
 
 ;;; Transfer logic
 
-(defn transfer-per-ssh [run-steps parameters session]
+(defn transfer-per-ssh [parameters session run-steps]
   (let [failed-steps (->> run-steps
                           (map #(% parameters session))
                           (filter #(= :failed (:status %)))
@@ -94,17 +95,36 @@
 (def WAIT-TIME 500)
 
 (defn sync-code-change
-  ([session dirs parameters]
-   (sync-code-change session dirs parameters (apply dir/scan (t/tracker) dirs)))
-  ([session dirs parameters old-tracker]
+  ([console session dirs parameters]
+   (sync-code-change console session dirs parameters (apply dir/scan (t/tracker) dirs)))
+  ([console session dirs parameters old-tracker]
    (let [new-tracker (apply dir/scan old-tracker dirs)]
      (if (not= new-tracker old-tracker)
-       (-> TRANSFER-STEPS
-           (transfer-per-ssh parameters session)
-           (:msg)
-           (m/info))
+       (->> TRANSFER-STEPS
+            (transfer-per-ssh parameters session)
+            (async/>!! console))
        (Thread/sleep WAIT-TIME))
-     (recur session dirs parameters new-tracker))))
+     (recur console session dirs parameters new-tracker))))
+
+(defn run-test-refresh-remotely [{repo :repo path :remote-path} session]
+  (let [output (->> {:cmd (str "cd " path repo ";" "./lein.sh test-refresh;")
+                     :out :stream
+                     :pty true}
+                    (ssh/ssh session)
+                    (:out-stream))]
+    (with-open [rdr (io/reader output)]
+      (doseq [line (line-seq rdr)] (m/info line)))))
+
+(defn print-to-console [console]
+  (while true
+    (let [{msg :msg} (async/<!! console)]
+      (m/info msg))))
+
+(defn start-remote-routine [session asset-paths parameters]
+  (let [console (async/chan)]
+    (future (sync-code-change console session asset-paths parameters))
+    (future (print-to-console console))
+    (run-test-refresh-remotely parameters session)))
 
 (defn session-option [parameters]
   {:user                     (:user parameters)
@@ -120,5 +140,5 @@
           session (ssh/session agent (:host parameters) (session-option parameters))]
       (m/info "* Starting with the parameters:" (assoc parameters :password "***") "\n")
       (ssh/connect session)
-      (ssh/with-connection session (sync-code-change session asset-paths parameters)))
-    (catch Exception e (m/info "* [error] " (.getMessage e)))))
+      (ssh/with-connection session (start-remote-routine session asset-paths parameters)))
+    (catch Exception e (m/info "* [error] " (.getMessage e) (when verbose e)))))
