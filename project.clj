@@ -1,4 +1,4 @@
-(defproject minhtuannguyen/remote-test-refresh "0.1.4-SNAPSHOT"
+(defproject minhtuannguyen/remote-test-refresh "0.1.4"
   :description "Automatically synchronize with remote project over ssh  when files change"
   :url "https://github.com/minhtuannguyen/remote-test-refresh"
   :license {:name "Eclipse Public License" :url "http://www.eclipse.org/legal/epl-v10.html"}

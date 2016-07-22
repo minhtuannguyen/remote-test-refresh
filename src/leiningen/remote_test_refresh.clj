@@ -68,7 +68,7 @@
                  (u/ask-clear-text "* ==> Please enter your ssh user:"))
 
         password (or (get-in project [:remote-test :password])
-                     (u/ask-for-password "* ==> SSH-Password:"))
+                     (u/ask-for-password "* ==> Please enter your ssh password:"))
 
         host (or (get-in project [:remote-test :host])
                  (u/ask-clear-text
@@ -80,11 +80,11 @@
 
         command (or (get-in project [:remote-test :command])
                     (u/ask-clear-text
-                     "* ==> Which command do you want to run on the repository of remote machine"))
+                     "* ==> Which command do you want to run on the repository of remote machine (optional):"))
 
         forwarding-port (or (get-in project [:remote-test :forwarding-port])
                             (u/ask-clear-text
-                             "* ==> Enter port if you need a port to be forwared or leave is empty:"))]
+                             "* ==> Enter port if you need a port to be forwared (optional):"))]
 
     (assert (not (empty? project-name)) project-name)
     (assert (not (empty? user)) user)
@@ -122,30 +122,43 @@
        (Thread/sleep WAIT-TIME))
      (recur console session dirs parameters new-tracker))))
 
-(defn run-test-refresh-remotely [{run-command :command repo :repo path :remote-path} session]
-  (let [output (->> {:cmd (str "cd " path repo ";" run-command ";")
-                     :out :stream
-                     :pty true}
+(defn run-command-remotely [{run-command :command repo :repo path :remote-path} session]
+  (let [output (->> {:cmd (str "cd " path repo ";" run-command ";") :out :stream :pty true}
                     (ssh/ssh session)
                     (:out-stream))]
     (with-open [rdr (io/reader output)]
       (doseq [line (line-seq rdr)] (m/info line)))))
 
-(defn print-to-console [console]
+(defn log-console [console]
   (while true
     (let [{msg :msg} (async/<!! console)]
-      (m/info "\n" msg "\n"))))
+      (m/info "\n" msg "\n")
+      (Thread/sleep WAIT-TIME))))
+
+(defn endless-loop []
+  (while true (Thread/sleep WAIT-TIME)))
+
+(defn run-command-and-forward-port [session parameters]
+  (let [{port :forwarding-port command :command} parameters]
+    (cond
+      (and (not (empty? port)) (not (empty? command)))
+      (ssh/with-local-port-forward [session (u/parse-int port) (u/parse-int port)]
+        (run-command-remotely parameters session))
+
+      (and (empty? port) (not (empty? command)))
+      (run-command-remotely parameters session)
+
+      (not (empty? port))
+      (ssh/with-local-port-forward [session (u/parse-int port) (u/parse-int port)]
+        (endless-loop))
+
+      :else (endless-loop))))
 
 (defn start-remote-routine [session asset-paths parameters]
-  (let [console (async/chan)
-        port (:forwarding-port parameters)]
+  (let [console (async/chan)]
     (future (sync-code-change console session asset-paths parameters))
-    (future (print-to-console console))
-    (if (and (not (empty? port)))
-      (ssh/with-local-port-forward
-        [session (u/parse-int port) (u/parse-int port)]
-        (run-test-refresh-remotely parameters session))
-      (run-test-refresh-remotely parameters session))))
+    (future (log-console console))
+    (run-command-and-forward-port session parameters)))
 
 (defn session-option [parameters]
   {:user                     (:user parameters)
