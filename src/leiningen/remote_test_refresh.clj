@@ -5,7 +5,8 @@
             [leiningen.core.main :as m]
             [leiningen.remote.utils.utils :as u]
             [clj-ssh.ssh :as ssh]
-            [clojure.java.shell :as sh]))
+            [clojure.java.shell :as sh]
+            [clojure.java.io :as io]))
 
 ;;; Transfer steps
 
@@ -20,7 +21,9 @@
             (apply sh/sh)
             (:out)
             (spit local-patch-file-name))
-       {:step :create-patch :status :success}
+       (if (.exists (io/as-file local-patch-file-name))
+         {:step :create-patch :status :success}
+         {:step :create-patch :status :failed :error "could not create local patch file"})
        (catch Exception e
          {:step :create-patch :status :failed :error (.getMessage e)})))
 
@@ -118,4 +121,4 @@
       (m/info "* Starting with the parameters:" (assoc parameters :password "***"))
       (ssh/connect session)
       (ssh/with-connection session (sync-code-change session asset-paths parameters)))
-    (catch Exception e (m/info "Error:" (.getMessage e)))))
+    (catch Exception e (m/info "* [error] " (.getMessage e)))))

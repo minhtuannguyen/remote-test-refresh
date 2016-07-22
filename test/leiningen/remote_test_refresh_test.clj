@@ -60,3 +60,12 @@
           option {}
           session {}]
       (is (= :failed (:status (rt/transfer-per-ssh steps option session)))))))
+
+(deftest ^:unit test-session-option
+  (testing "correct session option"
+    (is (= {:user                     "user"
+            :password                 "secret"
+            :strict-host-key-checking :no}
+
+           (rt/session-option {:user     "user"
+                               :password "secret"})))))
