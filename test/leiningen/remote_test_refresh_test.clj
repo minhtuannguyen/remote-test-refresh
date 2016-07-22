@@ -22,35 +22,40 @@
                (rt/find-asset-paths)
                (set))))))
 
-(deftest ^:unit test-determine-connection-parameter
+(deftest ^:unit test-start-parameters
   (testing "correct path"
-    (is (= {:host        "host"
-            :remote-path "path/"
-            :repo        "project"
-            :user        "user"
-            :command     "ls"
-            :password    "secret"}
+    (is (= {:host            "host"
+            :remote-path     "path/"
+            :repo            "project"
+            :user            "user"
+            :command         "ls"
+            :forwarding-port "90"
+            :password        "secret"}
 
            (-> {:name        "project"
-                :remote-test {:user        "user"
-                              :password    "secret"
-                              :host        "host"
-                              :command     "ls"
-                              :remote-path "path/"}}
+                :remote-test {:user            "user"
+                              :password        "secret"
+                              :host            "host"
+                              :command         "ls"
+                              :forwarding-port "90"
+                              :remote-path     "path/"}}
                (rt/start-parameters))))
 
-    (is (= {:host        "host"
-            :password    "secret"
-            :remote-path "path/"
-            :command     "ls"
-            :repo        "project"
-            :user        "user"}
+    (is (= {:host            "host"
+            :password        "secret"
+            :remote-path     "path/"
+            :command         "ls"
+            :forwarding-port "90"
+            :repo            "project"
+            :user            "user"}
            (-> {:name        "project"
-                :remote-test {:user        "user"
-                              :password    "secret"
-                              :host        "host"
-                              :command     "ls"
-                              :remote-path "path"}}
+                :remote-test {:user            "user"
+                              :password        "secret"
+                              :host            "host"
+                              :forwarding-port "90"
+
+                              :command         "ls"
+                              :remote-path     "path"}}
                (rt/start-parameters))))))
 
 (deftest ^:unit test-transfer-per-ssh

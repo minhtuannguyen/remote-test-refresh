@@ -36,3 +36,6 @@
   (-> path
       (io/as-file)
       (.exists)))
+
+(defn parse-int [s]
+  (new Integer (re-find  #"\d+" s)))

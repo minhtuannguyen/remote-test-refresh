@@ -80,19 +80,24 @@
 
         command (or (get-in project [:remote-test :command])
                     (u/ask-clear-text
-                     "* ==> Which command do you want to run on the repository of remote machine"))]
+                     "* ==> Which command do you want to run on the repository of remote machine"))
+
+        forwarding-port (or (get-in project [:remote-test :forwarding-port])
+                            (u/ask-clear-text
+                             "* ==> Enter port if you need a port to be forwared or leave is empty:"))]
 
     (assert (not (empty? project-name)) project-name)
     (assert (not (empty? user)) user)
     (assert (not (empty? user)) password)
     (assert (not (empty? host)) host)
     (assert (not (empty? path)) path)
-    {:repo        project-name
-     :user        user
-     :password    password
-     :host        host
-     :command     command
-     :remote-path (normalize-remote-path path)}))
+    {:repo            project-name
+     :user            user
+     :password        password
+     :host            host
+     :command         command
+     :forwarding-port forwarding-port
+     :remote-path     (normalize-remote-path path)}))
 
 (defn find-asset-paths [project]
   (->> (concat (:source-paths project ["src"])
@@ -132,10 +137,15 @@
       (m/info "\n" msg "\n"))))
 
 (defn start-remote-routine [session asset-paths parameters]
-  (let [console (async/chan)]
+  (let [console (async/chan)
+        port (:forwarding-port parameters)]
     (future (sync-code-change console session asset-paths parameters))
     (future (print-to-console console))
-    (run-test-refresh-remotely parameters session)))
+    (if (and (not (empty? port)))
+      (ssh/with-local-port-forward
+        [session (u/parse-int port) (u/parse-int port)]
+        (run-test-refresh-remotely parameters session))
+      (run-test-refresh-remotely parameters session))))
 
 (defn session-option [parameters]
   {:user                     (:user parameters)
