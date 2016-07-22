@@ -64,13 +64,13 @@
 (defn ssh-parameters [project]
   (let [project-name (:name project)
         user (or (get-in project [:remote-test :user])
-                 (u/ask-clear-text "SSH-User:"))
+                 (u/ask-clear-text "* ==> SSH-User:"))
         password (or (get-in project [:remote-test :password])
-                     (u/ask-for-password "SSH-Password:"))
+                     (u/ask-for-password "* ==> SSH-Password:"))
         host (or (get-in project [:remote-test :host])
-                 (u/ask-clear-text "SSH-Host:"))
+                 (u/ask-clear-text "* ==> SSH-Host:"))
         path (or (get-in project [:remote-test :remote-path])
-                 (u/ask-clear-text "Path to parent folder of repository on remote machine:"))]
+                 (u/ask-clear-text "* ==> Path to parent folder of repository on remote machine:"))]
     (assert (not (empty? project-name)) project-name)
     (assert (not (empty? user)) user)
     (assert (not (empty? user)) password)
@@ -118,7 +118,7 @@
           parameters (ssh-parameters project)
           agent (ssh/ssh-agent {:use-system-ssh-agent false})
           session (ssh/session agent (:host parameters) (session-option parameters))]
-      (m/info "* Starting with the parameters:" (assoc parameters :password "***"))
+      (m/info "* Starting with the parameters:" (assoc parameters :password "***") "\n")
       (ssh/connect session)
       (ssh/with-connection session (sync-code-change session asset-paths parameters)))
     (catch Exception e (m/info "* [error] " (.getMessage e)))))
