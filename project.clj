@@ -4,7 +4,8 @@
   :license {:name "Eclipse Public License" :url "http://www.eclipse.org/legal/epl-v10.html"}
   :eval-in-leiningen true
 
-  :dependencies [[org.clojure/tools.namespace "0.2.11" :exclusions [org.clojure/clojure]]]
+  :dependencies [[org.clojure/tools.namespace "0.2.11" :exclusions [org.clojure/clojure]]
+                 [clj-ssh "0.5.14"]]
 
   :profiles {:uberjar {:aot :all}
              :test    {:resource-paths ["test-resources"]}
