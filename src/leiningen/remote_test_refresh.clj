@@ -49,7 +49,7 @@
                           (filter #(= :failed (:status %)))
                           (reduce str))]
     (if (empty? failed-steps)
-      {:status :success :msg "* Change has been transfered successfully to your remote repo"}
+      {:status :success :msg "* Change has been transfered successfully to your remote repository"}
       {:status :failed :msg (str "* Transfer per SSH failed in: " failed-steps)})))
 
 (defn normalize-remote-path [path]
@@ -60,10 +60,14 @@
 
 (defn ssh-parameters [project]
   (let [project-name (:name project)
-        user (get-in project [:remote-test :user])
-        password (get-in project [:remote-test :password])
-        host (get-in project [:remote-test :host])
-        path (get-in project [:remote-test :remote-path])]
+        user (or (get-in project [:remote-test :user])
+                 (u/ask-clear-text "SSH-User:"))
+        password (or (get-in project [:remote-test :password])
+                     (u/ask-for-password "SSH-Password:"))
+        host (or (get-in project [:remote-test :host])
+                 (u/ask-clear-text "SSH-Host:"))
+        path (or (get-in project [:remote-test :remote-path])
+                 (u/ask-clear-text "Path to parent folder of repository on remote machine:"))]
     (assert (not (empty? project-name)) project-name)
     (assert (not (empty? user)) user)
     (assert (not (empty? user)) password)
@@ -99,15 +103,19 @@
        (Thread/sleep WAIT-TIME))
      (recur session dirs parameters new-tracker))))
 
+(defn session-option [parameters]
+  {:user                     (:user parameters)
+   :password                 (:password parameters)
+   :strict-host-key-checking :no})
+
 (defn remote-test-refresh [project & _]
   (m/info "* Remote-Test-Refresh version:" (u/artifact-version))
-  (let [asset-paths (find-asset-paths project)
-        parameters (ssh-parameters project)
-        agent (ssh/ssh-agent {:use-system-ssh-agent false})
-        session (ssh/session agent
-                             (:host parameters)
-                             {:user                     (:user parameters)
-                              :password                 (:password parameters)
-                              :strict-host-key-checking :no})]
-    (m/info "* Starting with the parameters:" (assoc parameters :password "**"))
-    (ssh/with-connection session (sync-code-change session asset-paths parameters))))
+  (try
+    (let [asset-paths (find-asset-paths project)
+          parameters (ssh-parameters project)
+          agent (ssh/ssh-agent {:use-system-ssh-agent false})
+          session (ssh/session agent (:host parameters) (session-option parameters))]
+      (m/info "* Starting with the parameters:" (assoc parameters :password "***"))
+      (ssh/connect session)
+      (ssh/with-connection session (sync-code-change session asset-paths parameters)))
+    (catch Exception e (m/info "Error:" (.getMessage e)))))
