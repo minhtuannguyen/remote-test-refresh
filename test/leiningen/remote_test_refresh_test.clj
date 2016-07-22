@@ -72,7 +72,7 @@
 
 (deftest ^:unit test-session-option
   (testing "correct session option"
-    (is (= {:user                     "user"
+    (is (= {:username                 "user"
             :password                 "secret"
             :strict-host-key-checking :no}
 

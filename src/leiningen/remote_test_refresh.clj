@@ -161,7 +161,7 @@
     (run-command-and-forward-port session parameters)))
 
 (defn session-option [parameters]
-  {:user                     (:user parameters)
+  {:username                 (:user parameters)
    :password                 (:password parameters)
    :strict-host-key-checking :no})
 
