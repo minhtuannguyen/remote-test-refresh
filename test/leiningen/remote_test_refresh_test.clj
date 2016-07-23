@@ -29,7 +29,7 @@
             :repo            "project"
             :user            "user"
             :command         "ls"
-            :forwarding-port "90"
+            :forwarding-port 90
             :auth            {:with-system-agent true}}
 
            (-> {:name        "project"
@@ -44,7 +44,7 @@
   (is (= {:host            "host"
           :remote-path     "path/"
           :command         "ls"
-          :forwarding-port "90"
+          :forwarding-port 90
           :auth            {:with-system-agent true}
           :repo            "project"
           :user            "user"}
@@ -78,3 +78,8 @@
            (rt/session-option {:user     "user"
                                :password "secret"}
                               true)))))
+
+(deftest ^:unit test-valid-port
+  (is (false? (rt/valid-port? -1)))
+  (is (false? (rt/valid-port? 0)))
+  (is (true? (rt/valid-port? 1))))

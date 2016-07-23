@@ -10,7 +10,7 @@
             [clojure.java.io :as io]))
 
 ;;; TRANSFER STEPS
-(def verbose false)
+(def verbose true)
 (def local-patch-file-name "test-refresh-local.patch")
 (def remote-patch-file-name "test-refresh.remote.patch")
 
@@ -89,18 +89,21 @@
 (defn endless-loop []
   (while true (Thread/sleep WAIT-TIME)))
 
+(defn valid-port? [port]
+  (> port 0))
+
 (defn run-command-and-forward-port [session parameters]
   (let [{port :forwarding-port command :command} parameters]
     (cond
-      (and (not (empty? port)) (not (empty? command)))
-      (ssh/with-local-port-forward [session (u/parse-int port) (u/parse-int port)]
+      (and (valid-port? port) (not (empty? command)))
+      (ssh/with-local-port-forward [session port port]
         (run-command-remotely parameters session))
 
-      (and (empty? port) (not (empty? command)))
+      (and (not (valid-port? port)) (not (empty? command)))
       (run-command-remotely parameters session)
 
-      (not (empty? port))
-      (ssh/with-local-port-forward [session (u/parse-int port) (u/parse-int port)]
+      (valid-port? port)
+      (ssh/with-local-port-forward [session port port]
         (endless-loop))
 
       :else (endless-loop))))
@@ -182,7 +185,7 @@
      :auth            auth
      :host            host
      :command         command
-     :forwarding-port forwarding-port
+     :forwarding-port (u/parse-int forwarding-port)
      :remote-path     (normalize-remote-path path)}))
 
 (defn find-asset-paths [project]

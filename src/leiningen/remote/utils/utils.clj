@@ -41,8 +41,8 @@
     validate-fn)))
 
 (defn yes-or-no [input]
-  (or (= input "y")
-      (= input "n")))
+  (or (= "y" input)
+      (= "n" input)))
 
 (defn exists? [path]
   (-> path
@@ -50,4 +50,6 @@
       (.exists)))
 
 (defn parse-int [s]
-  (new Integer (re-find #"\d+" s)))
+  (try
+    (new Integer (re-find #"\d+" s))
+    (catch Exception _ -1)))
