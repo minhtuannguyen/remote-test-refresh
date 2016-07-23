@@ -62,13 +62,21 @@
       lower-case-path
       (str lower-case-path "/"))))
 
+(defn ask-for-auth [project]
+  (let [with-system-agent (or (get-in project [:remote-test :with-system-agent])
+                              (u/ask-clear-text
+                               "* ==> Do you want to use system-agent (y/n):"
+                               u/yes-or-no))]
+    (if with-system-agent
+      {:with-system-agent true}
+      {:with-system-agent false
+       :password          (u/ask-for-password
+                           "* ==> Please enter your ssh password:")})))
+
 (defn start-parameters [project]
   (let [project-name (:name project)
         user (or (get-in project [:remote-test :user])
                  (u/ask-clear-text "* ==> Please enter your ssh user:"))
-
-        password (or (get-in project [:remote-test :password])
-                     (u/ask-for-password "* ==> Please enter your ssh password:"))
 
         host (or (get-in project [:remote-test :host])
                  (u/ask-clear-text
@@ -84,16 +92,18 @@
 
         forwarding-port (or (get-in project [:remote-test :forwarding-port])
                             (u/ask-clear-text
-                             "* ==> Enter port if you need a port to be forwared (optional):"))]
+                             "* ==> Enter port if you need a port to be forwarded (optional):"))
+        auth (ask-for-auth project)]
 
     (assert (not (empty? project-name)) project-name)
     (assert (not (empty? user)) user)
-    (assert (not (empty? user)) password)
     (assert (not (empty? host)) host)
     (assert (not (empty? path)) path)
+    (assert (not (empty? auth)) auth)
+
     {:repo            project-name
      :user            user
-     :password        password
+     :auth            auth
      :host            host
      :command         command
      :forwarding-port forwarding-port
@@ -160,18 +170,27 @@
     (future (log-console console))
     (run-command-and-forward-port session parameters)))
 
-(defn session-option [parameters]
-  {:username                 (:user parameters)
-   :strict-host-key-checking :no})
+(defn session-option [parameters with-system-agent?]
+  (let [default-option {:username                 (:user parameters)
+                        :strict-host-key-checking :no}]
+    (if with-system-agent?
+      default-option
+      (merge default-option {:password (:password parameters)}))))
+
+(defn create-session [parameters]
+  (let [with-system-agent? (get-in parameters [:auth :with-system-agent])
+        agent (ssh/ssh-agent {:use-system-ssh-agent with-system-agent?})
+        session (ssh/session agent (:host parameters) (session-option parameters with-system-agent?))]
+    (m/info "* Starting with the parameters:" (assoc parameters :password "***") "\n")
+    (ssh/connect session)
+    session))
 
 (defn remote-test-refresh [project & _]
   (m/info "* Remote-Test-Refresh version:" (u/artifact-version))
   (try
-    (let [asset-paths (find-asset-paths project)
-          parameters (start-parameters project)
-          agent (ssh/ssh-agent {})
-          session (ssh/session agent (:host parameters) (session-option parameters))]
-      (m/info "* Starting with the parameters:" (assoc parameters :password "***") "\n")
-      (ssh/connect session)
-      (ssh/with-connection session (start-remote-routine session asset-paths parameters)))
+    (let [parameters (start-parameters project)
+          session (create-session parameters)]
+      (ssh/with-connection
+        session
+        (start-remote-routine session (find-asset-paths project) parameters)))
     (catch Exception e (m/info "* [error] " (.getMessage e) (when verbose e)))))

@@ -21,16 +21,28 @@
          (m/info "The input was not correct")
          (recur (capture-fn question)))))))
 
-(defn ask-clear-text [question]
-  (ask-user
-   (fn [prompt] (do (m/info prompt) (read-line)))
-   question))
+(defn ask-clear-text
+  ([question]
+   (ask-clear-text question (fn [_] true)))
+  ([question validate-fn]
+   (ask-user
+    (fn [prompt] (do (m/info prompt) (read-line)))
+    question)
+   validate-fn))
 
-(defn ask-for-password [question]
-  (ask-user
-   (fn [prompt]
-     (String/valueOf (.readPassword (System/console) prompt nil)))
-   question))
+(defn ask-for-password
+  ([question]
+   (ask-for-password question (fn [_] true)))
+  ([question validate-fn]
+   (ask-user
+    (fn [prompt]
+      (String/valueOf (.readPassword (System/console) prompt nil)))
+    question
+    validate-fn)))
+
+(defn yes-or-no [input]
+  (or (= input "y")
+      (= input "n")))
 
 (defn exists? [path]
   (-> path
@@ -38,4 +50,4 @@
       (.exists)))
 
 (defn parse-int [s]
-  (new Integer (re-find  #"\d+" s)))
+  (new Integer (re-find #"\d+" s)))

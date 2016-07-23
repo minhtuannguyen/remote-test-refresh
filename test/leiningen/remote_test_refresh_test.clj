@@ -30,33 +30,33 @@
             :user            "user"
             :command         "ls"
             :forwarding-port "90"
-            :password        "secret"}
+            :auth            {:with-system-agent true}}
 
            (-> {:name        "project"
-                :remote-test {:user            "user"
-                              :password        "secret"
-                              :host            "host"
-                              :command         "ls"
-                              :forwarding-port "90"
-                              :remote-path     "path/"}}
-               (rt/start-parameters))))
+                :remote-test {:user              "user"
+                              :host              "host"
+                              :command           "ls"
+                              :forwarding-port   "90"
+                              :with-system-agent true
+                              :remote-path       "path/"}}
+               (rt/start-parameters)))))
 
-    (is (= {:host            "host"
-            :password        "secret"
-            :remote-path     "path/"
-            :command         "ls"
-            :forwarding-port "90"
-            :repo            "project"
-            :user            "user"}
-           (-> {:name        "project"
-                :remote-test {:user            "user"
-                              :password        "secret"
-                              :host            "host"
-                              :forwarding-port "90"
-
-                              :command         "ls"
-                              :remote-path     "path"}}
-               (rt/start-parameters))))))
+  (is (= {:host            "host"
+          :remote-path     "path/"
+          :command         "ls"
+          :forwarding-port "90"
+          :auth            {:with-system-agent true}
+          :repo            "project"
+          :user            "user"}
+         (-> {:name        "project"
+              :remote-test {:user              "user"
+                            :password          "secret"
+                            :host              "host"
+                            :forwarding-port   "90"
+                            :with-system-agent true
+                            :command           "ls"
+                            :remote-path       "path"}}
+             (rt/start-parameters)))))
 
 (deftest ^:unit test-transfer-per-ssh
   (testing "check for correct status"
@@ -73,8 +73,16 @@
 (deftest ^:unit test-session-option
   (testing "correct session option"
     (is (= {:username                 "user"
+            :strict-host-key-checking :no}
+
+           (rt/session-option {:user     "user"
+                               :password "secret"}
+                              true)))
+
+    (is (= {:username                 "user"
             :password                 "secret"
             :strict-host-key-checking :no}
 
            (rt/session-option {:user     "user"
-                               :password "secret"})))))
+                               :password "secret"}
+                              false)))))
