@@ -31,7 +31,7 @@
 (defn upload-patch! [{repo :repo path :remote-path} session]
   (let [_ (ssh/scp-to session local-patch-file-name (remote-patch-file-path path repo))
         result-remove (sh/sh "rm" "-f" local-patch-file-name)]
-    (if (= 0 (:exit result-remove))
+    (if (zero? (:exit result-remove))
       {:step :upload-patch :status :success}
       {:step :upload-patch :status :failed :error (:err result-remove)})))
 
@@ -41,7 +41,7 @@
                  (str "git apply --whitespace=warn " remote-patch-file-name ";")
                  "rm -f " remote-patch-file-name ";")
         result-apply-patch (ssh/ssh session {:cmd cmd :agent-forwarding true})]
-    (if (= 0 (:exit result-apply-patch))
+    (if (zero? (:exit result-apply-patch))
       {:step :apply-patch :status :success}
       {:step :apply-patch :status :failed :error (:err result-apply-patch)})))
 
@@ -166,17 +166,24 @@
 (defn ask-for-parameters [project]
   (let [project-name (:name project)
         user (or (get-in project [:remote-test :user])
-                 (u/ask-clear-text "* ==> Please enter your ssh user:"))
+                 (u/ask-clear-text
+                  "* ==> Please enter your ssh user:"
+                  identity
+                  #(not (empty? %))))
 
         host (or (get-in project [:remote-test :host])
                  (u/ask-clear-text
-                  "* ==> Please enter your remote host:"))
+                  "* ==> Please enter your remote host:"
+                  identity
+                  #(not (empty? %))))
 
         auth (ask-for-auth project)
 
         path (or (get-in project [:remote-test :remote-path])
                  (u/ask-clear-text
-                  "* ==> Please enter parent folder path of repository on remote machine:"))
+                  "* ==> Please enter parent folder path of repository on remote machine:"
+                  identity
+                  #(not (empty? %))))
 
         command (or (get-in project [:remote-test :command])
                     (u/ask-clear-text
