@@ -60,7 +60,14 @@ To start `remote-test-refresh` :
     * Change has been transfered successfully to your remote repository
       Application starting ...
     ...
-    
+
+# Issues
+If you have this problem under ubuntu when using system agent: java.lang.UnsatisfiedLinkError: Unable to load library 'c': /usr/lib/x86_64-linux-gnu/libc.so: invalid ELF header
+
+    $ cd /lib/x86_64-linux-gnu
+    $ sudo ln -s libc.so.6 libc.so
+    ...
+
 ## License
 
 Copyright © 2016 Distributed under the Eclipse Public License version 1.0.
