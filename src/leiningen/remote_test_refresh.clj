@@ -40,7 +40,7 @@
                  "git reset --hard;"
                  (str "git apply --whitespace=warn " remote-patch-file-name ";")
                  "rm -f " remote-patch-file-name ";")
-        result-apply-patch (ssh/ssh session {:cmd cmd})]
+        result-apply-patch (ssh/ssh session {:cmd cmd :agent-forwarding true})]
     (if (= 0 (:exit result-apply-patch))
       {:step :apply-patch :status :success}
       {:step :apply-patch :status :failed :error (:err result-apply-patch)})))
@@ -123,7 +123,7 @@
      (recur console session dirs parameters new-tracker))))
 
 (defn run-command-remotely [{run-command :command repo :repo path :remote-path} session]
-  (let [output (->> {:cmd (str "cd " path repo ";" run-command ";") :out :stream :pty true}
+  (let [output (->> {:cmd (str "cd " path repo ";" run-command ";") :out :stream :pty true :agent-forwarding true}
                     (ssh/ssh session)
                     (:out-stream))]
     (with-open [rdr (io/reader output)]
@@ -162,7 +162,6 @@
 
 (defn session-option [parameters]
   {:username                 (:user parameters)
-   :password                 (:password parameters)
    :strict-host-key-checking :no})
 
 (defn remote-test-refresh [project & _]
@@ -170,7 +169,7 @@
   (try
     (let [asset-paths (find-asset-paths project)
           parameters (start-parameters project)
-          agent (ssh/ssh-agent {:use-system-ssh-agent false})
+          agent (ssh/ssh-agent {})
           session (ssh/session agent (:host parameters) (session-option parameters))]
       (m/info "* Starting with the parameters:" (assoc parameters :password "***") "\n")
       (ssh/connect session)
