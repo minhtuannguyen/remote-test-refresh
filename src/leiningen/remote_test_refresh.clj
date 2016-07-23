@@ -9,7 +9,7 @@
             [clojure.java.shell :as sh]
             [clojure.java.io :as io]))
 
-;;; Transfer steps
+;;; TRANSFER STEPS
 (def verbose false)
 (def local-patch-file-name "test-refresh-local.patch")
 (def remote-patch-file-name "test-refresh.remote.patch")
@@ -45,7 +45,10 @@
       {:step :apply-patch :status :success}
       {:step :apply-patch :status :failed :error (:err result-apply-patch)})))
 
-;;; Transfer logic
+;;; TRANSFER LOGIC
+
+(def TRANSFER-STEPS [create-patch! upload-patch! apply-patch!])
+(def WAIT-TIME 500)
 
 (defn transfer-per-ssh [parameters session run-steps]
   (let [failed-steps (->> run-steps
@@ -56,16 +59,7 @@
       {:status :success :msg "* Change has been transfered successfully to your remote repository"}
       {:status :failed :msg (str "* Transfer per SSH failed in: " failed-steps)})))
 
-(defn find-asset-paths [project]
-  (->> (concat (:source-paths project ["src"])
-               (:resource-paths project ["resources"])
-               (:test-paths project ["test"]))
-       (vec)))
-
-;;;; Main
-
-(def TRANSFER-STEPS [create-patch! upload-patch! apply-patch!])
-(def WAIT-TIME 500)
+;;; MAIN
 
 (defn sync-code-change
   ([console session dirs parameters]
@@ -86,7 +80,7 @@
     (with-open [rdr (io/reader output)]
       (doseq [line (line-seq rdr)] (m/info line)))))
 
-(defn log-console [console]
+(defn log [console]
   (while true
     (let [{msg :msg} (async/<!! console)]
       (m/info "\n" msg "\n")
@@ -114,7 +108,7 @@
 (defn start-remote-routine [session asset-paths parameters]
   (let [console (async/chan)]
     (future (sync-code-change console session asset-paths parameters))
-    (future (log-console console))
+    (future (log console))
     (run-command-and-forward-port session parameters)))
 
 (defn session-option [parameters with-system-agent?]
@@ -125,7 +119,7 @@
       (merge default-option {:password (get-in parameters [:auth :password])}))))
 
 (defn create-session [parameters]
-  (m/info "\n" "* Starting with the parameters:" (assoc-in parameters [:auth :password] "***"))
+  (m/info "\n* Starting with the parameters:" (assoc-in parameters [:auth :password] "***"))
   (let [with-system-agent? (get-in parameters [:auth :with-system-agent])
         agent (ssh/ssh-agent {:use-system-ssh-agent with-system-agent?})
         session-params (session-option parameters with-system-agent?)
@@ -190,6 +184,12 @@
      :command         command
      :forwarding-port forwarding-port
      :remote-path     (normalize-remote-path path)}))
+
+(defn find-asset-paths [project]
+  (->> (concat (:source-paths project ["src"])
+               (:resource-paths project ["resources"])
+               (:test-paths project ["test"]))
+       (vec)))
 
 (defn remote-test-refresh [project & _]
   (m/info "* Remote-Test-Refresh version:" (u/artifact-version))
