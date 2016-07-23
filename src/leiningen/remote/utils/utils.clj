@@ -27,8 +27,8 @@
   ([question validate-fn]
    (ask-user
     (fn [prompt] (do (m/info prompt) (read-line)))
-    question)
-   validate-fn))
+    question
+    validate-fn)))
 
 (defn ask-for-password
   ([question]

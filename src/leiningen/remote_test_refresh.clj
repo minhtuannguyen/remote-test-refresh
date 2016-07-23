@@ -10,7 +10,7 @@
             [clojure.java.io :as io]))
 
 ;;; Transfer steps
-(def verbose true)
+(def verbose false)
 (def local-patch-file-name "test-refresh-local.patch")
 (def remote-patch-file-name "test-refresh.remote.patch")
 
@@ -55,59 +55,6 @@
     (if (empty? failed-steps)
       {:status :success :msg "* Change has been transfered successfully to your remote repository"}
       {:status :failed :msg (str "* Transfer per SSH failed in: " failed-steps)})))
-
-(defn normalize-remote-path [path]
-  (let [lower-case-path (str/lower-case path)]
-    (if (.endsWith lower-case-path "/")
-      lower-case-path
-      (str lower-case-path "/"))))
-
-(defn ask-for-auth [project]
-  (let [with-system-agent (or (get-in project [:remote-test :with-system-agent])
-                              (u/ask-clear-text
-                               "* ==> Do you want to use system-agent (y/n):"
-                               u/yes-or-no))]
-    (if with-system-agent
-      {:with-system-agent true}
-      {:with-system-agent false
-       :password          (u/ask-for-password
-                           "* ==> Please enter your ssh password:")})))
-
-(defn start-parameters [project]
-  (let [project-name (:name project)
-        user (or (get-in project [:remote-test :user])
-                 (u/ask-clear-text "* ==> Please enter your ssh user:"))
-
-        host (or (get-in project [:remote-test :host])
-                 (u/ask-clear-text
-                  "* ==> Please enter your remote host:"))
-
-        path (or (get-in project [:remote-test :remote-path])
-                 (u/ask-clear-text
-                  "* ==> Please enter parent folder path of repository on remote machine:"))
-
-        command (or (get-in project [:remote-test :command])
-                    (u/ask-clear-text
-                     "* ==> Which command do you want to run on the repository of remote machine (optional):"))
-
-        forwarding-port (or (get-in project [:remote-test :forwarding-port])
-                            (u/ask-clear-text
-                             "* ==> Enter port if you need a port to be forwarded (optional):"))
-        auth (ask-for-auth project)]
-
-    (assert (not (empty? project-name)) project-name)
-    (assert (not (empty? user)) user)
-    (assert (not (empty? host)) host)
-    (assert (not (empty? path)) path)
-    (assert (not (empty? auth)) auth)
-
-    {:repo            project-name
-     :user            user
-     :auth            auth
-     :host            host
-     :command         command
-     :forwarding-port forwarding-port
-     :remote-path     (normalize-remote-path path)}))
 
 (defn find-asset-paths [project]
   (->> (concat (:source-paths project ["src"])
@@ -175,20 +122,79 @@
                         :strict-host-key-checking :no}]
     (if with-system-agent?
       default-option
-      (merge default-option {:password (:password parameters)}))))
+      (merge default-option {:password (get-in parameters [:auth :password])}))))
 
 (defn create-session [parameters]
+  (m/info "* Starting with the parameters:" (assoc-in parameters [:auth :password] "***"))
   (let [with-system-agent? (get-in parameters [:auth :with-system-agent])
         agent (ssh/ssh-agent {:use-system-ssh-agent with-system-agent?})
-        session (ssh/session agent (:host parameters) (session-option parameters with-system-agent?))]
-    (m/info "* Starting with the parameters:" (assoc parameters :password "***") "\n")
+        session-params (session-option parameters with-system-agent?)
+        session (ssh/session agent (:host parameters) session-params)]
+    (m/info "* Starting session the parameters:"
+            (-> session-params
+                (assoc :password "***")
+                (assoc :use-system-ssh-agent with-system-agent?)) "\n")
     (ssh/connect session)
     session))
+
+(defn normalize-remote-path [path]
+  (let [lower-case-path (str/lower-case path)]
+    (if (.endsWith lower-case-path "/")
+      lower-case-path
+      (str lower-case-path "/"))))
+
+(defn ask-for-auth [project]
+  (let [with-system-agent (or (get-in project [:remote-test :with-system-agent])
+                              (u/ask-clear-text
+                               "* ==> Do you want to use system agent (y/n):"
+                               u/yes-or-no))]
+    (if (or (= "y" with-system-agent) (true? with-system-agent))
+      {:with-system-agent true}
+      {:with-system-agent false
+       :password          (u/ask-for-password
+                           "* ==> Please enter your ssh password:")})))
+
+(defn ask-for-parameters [project]
+  (let [project-name (:name project)
+        user (or (get-in project [:remote-test :user])
+                 (u/ask-clear-text "* ==> Please enter your ssh user:"))
+
+        host (or (get-in project [:remote-test :host])
+                 (u/ask-clear-text
+                  "* ==> Please enter your remote host:"))
+
+        auth (ask-for-auth project)
+
+        path (or (get-in project [:remote-test :remote-path])
+                 (u/ask-clear-text
+                  "* ==> Please enter parent folder path of repository on remote machine:"))
+
+        command (or (get-in project [:remote-test :command])
+                    (u/ask-clear-text
+                     "* ==> Which command do you want to run on the repository of remote machine (optional):"))
+
+        forwarding-port (or (get-in project [:remote-test :forwarding-port])
+                            (u/ask-clear-text
+                             "* ==> Enter port if you need a port to be forwarded (optional):"))]
+
+    (assert (not (empty? project-name)) project-name)
+    (assert (not (empty? user)) user)
+    (assert (not (empty? host)) host)
+    (assert (not (empty? path)) path)
+    (assert (not (empty? auth)) auth)
+
+    {:repo            project-name
+     :user            user
+     :auth            auth
+     :host            host
+     :command         command
+     :forwarding-port forwarding-port
+     :remote-path     (normalize-remote-path path)}))
 
 (defn remote-test-refresh [project & _]
   (m/info "* Remote-Test-Refresh version:" (u/artifact-version))
   (try
-    (let [parameters (start-parameters project)
+    (let [parameters (ask-for-parameters project)
           session (create-session parameters)]
       (ssh/with-connection
         session

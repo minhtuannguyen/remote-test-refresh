@@ -39,7 +39,7 @@
                               :forwarding-port   "90"
                               :with-system-agent true
                               :remote-path       "path/"}}
-               (rt/start-parameters)))))
+               (rt/ask-for-parameters)))))
 
   (is (= {:host            "host"
           :remote-path     "path/"
@@ -56,7 +56,7 @@
                             :with-system-agent true
                             :command           "ls"
                             :remote-path       "path"}}
-             (rt/start-parameters)))))
+             (rt/ask-for-parameters)))))
 
 (deftest ^:unit test-transfer-per-ssh
   (testing "check for correct status"
@@ -77,12 +77,4 @@
 
            (rt/session-option {:user     "user"
                                :password "secret"}
-                              true)))
-
-    (is (= {:username                 "user"
-            :password                 "secret"
-            :strict-host-key-checking :no}
-
-           (rt/session-option {:user     "user"
-                               :password "secret"}
-                              false)))))
+                              true)))))
