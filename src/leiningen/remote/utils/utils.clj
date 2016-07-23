@@ -23,10 +23,12 @@
 
 (defn ask-clear-text
   ([question]
-   (ask-clear-text question (fn [_] true)))
-  ([question validate-fn]
+   (ask-clear-text question identity (fn [_] true)))
+  ([question parse-fn]
+   (ask-clear-text question parse-fn (fn [_] true)))
+  ([question parse-fn validate-fn]
    (ask-user
-    (fn [prompt] (do (m/info prompt) (read-line)))
+    (fn [prompt] (do (m/info prompt) (parse-fn (read-line))))
     question
     validate-fn)))
 
@@ -49,7 +51,9 @@
       (io/as-file)
       (.exists)))
 
-(defn parse-int [s]
+(defn parse-port [s]
   (try
-    (new Integer (re-find #"\d+" s))
-    (catch Exception _ -1)))
+    (if (empty? s)
+      :empty
+      (new Integer (re-find #"\d+" s)))
+    (catch Exception _ :invalid)))

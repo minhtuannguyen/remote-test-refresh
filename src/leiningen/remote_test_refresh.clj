@@ -10,7 +10,7 @@
             [clojure.java.io :as io]))
 
 ;;; TRANSFER STEPS
-(def verbose true)
+(def verbose false)
 (def local-patch-file-name "test-refresh-local.patch")
 (def remote-patch-file-name "test-refresh.remote.patch")
 
@@ -90,21 +90,23 @@
   (while true (Thread/sleep WAIT-TIME)))
 
 (defn valid-port? [port]
-  (> port 0))
+  (and (not= :empty port) (not= :invalid port) (> port 1023)))
+
+(defn has-port? [parameters]
+  (contains? parameters :forwarding-port))
 
 (defn run-command-and-forward-port [session parameters]
   (let [{port :forwarding-port command :command} parameters]
     (cond
-      (and (valid-port? port) (not (empty? command)))
+      (and (has-port? parameters) (not (empty? command)))
       (ssh/with-local-port-forward [session port port]
         (run-command-remotely parameters session))
 
-      (and (not (valid-port? port)) (not (empty? command)))
+      (and (not (has-port? parameters)) (not (empty? command)))
       (run-command-remotely parameters session)
 
-      (valid-port? port)
-      (ssh/with-local-port-forward [session port port]
-        (endless-loop))
+      (has-port? parameters)
+      (ssh/with-local-port-forward [session port port] (endless-loop))
 
       :else (endless-loop))))
 
@@ -172,7 +174,15 @@
 
         forwarding-port (or (get-in project [:remote-test :forwarding-port])
                             (u/ask-clear-text
-                             "* ==> Enter port if you need a port to be forwarded (optional):"))]
+                             "* ==> Enter a port  > 1023 if you need a port to be forwarded (optional):"
+                             u/parse-port
+                             #(or (= :empty %) (valid-port? %))))
+        parameters {:repo            project-name
+                    :user            user
+                    :auth            auth
+                    :host            host
+                    :command         command
+                    :remote-path     (normalize-remote-path path)}]
 
     (assert (not (empty? project-name)) project-name)
     (assert (not (empty? user)) user)
@@ -180,13 +190,9 @@
     (assert (not (empty? path)) path)
     (assert (not (empty? auth)) auth)
 
-    {:repo            project-name
-     :user            user
-     :auth            auth
-     :host            host
-     :command         command
-     :forwarding-port (u/parse-int forwarding-port)
-     :remote-path     (normalize-remote-path path)}))
+    (if (= :empty forwarding-port)
+      parameters
+      (merge parameters {:forwarding-port forwarding-port}))))
 
 (defn find-asset-paths [project]
   (->> (concat (:source-paths project ["src"])

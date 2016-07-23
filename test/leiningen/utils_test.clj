@@ -3,9 +3,10 @@
             [leiningen.remote.utils.utils :as u]))
 
 (deftest ^:unit test-parse-init
-  (is (= 20 (u/parse-int "20")))
-  (is (= 0 (u/parse-int "0")))
-  (is (= -1 (u/parse-int "sds"))))
+  (is (= 20 (u/parse-port "20")))
+  (is (= 0 (u/parse-port "0")))
+  (is (= :invalid (u/parse-port "sds")))
+  (is (= :empty (u/parse-port ""))))
 
 (deftest ^:unit test-exists?
   (is (true? (u/exists? "test-resources/test.patch")))

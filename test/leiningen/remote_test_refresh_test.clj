@@ -36,7 +36,7 @@
                 :remote-test {:user              "user"
                               :host              "host"
                               :command           "ls"
-                              :forwarding-port   "90"
+                              :forwarding-port   90
                               :with-system-agent true
                               :remote-path       "path/"}}
                (rt/ask-for-parameters)))))
@@ -52,7 +52,7 @@
               :remote-test {:user              "user"
                             :password          "secret"
                             :host              "host"
-                            :forwarding-port   "90"
+                            :forwarding-port   90
                             :with-system-agent true
                             :command           "ls"
                             :remote-path       "path"}}
@@ -82,4 +82,7 @@
 (deftest ^:unit test-valid-port
   (is (false? (rt/valid-port? -1)))
   (is (false? (rt/valid-port? 0)))
-  (is (true? (rt/valid-port? 1))))
+  (is (false? (rt/valid-port? :empty)))
+  (is (false? (rt/valid-port? :invalid)))
+  (is (false? (rt/valid-port? 1)))
+  (is (true? (rt/valid-port? 1024))))
