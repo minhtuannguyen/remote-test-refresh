@@ -7,12 +7,12 @@
 
 [![Clojars Project](http://clojars.org/minhtuannguyen/remote-test-refresh/latest-version.svg)](https://clojars.org/minhtuannguyen/remote-test-refresh)
 
-`remote-test-refresh` is a leiningen plugin which synchronizes automatically changes of local repository with other repository on remote machine over ssh. When running, `remote-test-refresh` will scan for all source and test resources defined in the project.clj. When detecting change, `remote-test-refresh` will transfer the diff per ssh and apply it to the to the remote repository.
+`remote-test-refresh` is a leiningen plugin which uses SSH to synchronizes code changes between local and remote machine automatically. When running, `remote-test-refresh` will scan for all source and test resources defined in the project.clj. When detecting change, `remote-test-refresh` will transfer the diff per ssh and apply it to the remote repository.
 
 In summary, `remote-test-refresh` offer possibilities:
    +  to synchronize code change between local and remote repository over ssh.
-   +  to run command (.i.e start application) on the remote repository and stream its output. 
-   +  to forward port from the remote host to your local maschine. It's useful to test interactively.  
+   +  to run command (.i.e start application, run tests) on the remote repository and stream its output to local machine 
+   +  to forward port between remote and local machine. It's useful to test application interactively.
    
 This picture explains how `remote-test-refresh` works:   
    
@@ -21,7 +21,7 @@ This picture explains how `remote-test-refresh` works:
      |----Local Machine----|        remote-test-refresh        |----Remote Machine---|  
      |                     |     <----------SSH---------->     |                     | 
      | +--parent-folder    |      + transfer code change       | +--parent-folder    | 
-     |    +-- project-1    |      + port forwaring             |   +-- project-1     | 
+     |    +-- project-1    |      + port forwarding            |   +-- project-1     | 
      |    +-- project-2    |      + run command                |   +-- project-2     | 
      |---------------------|                                   |---------------------|  
 	                                                       
@@ -30,17 +30,21 @@ This picture explains how `remote-test-refresh` works:
 To configure `remote-test-refresh`,  you can define `:remote-test` in your .lein/profiles.clj.
 
 ```clojure
-:remote-test {:user              "your-username-on-remote-machine" ;required for ssh connection
-		      :host              "your.host.name-or-ip"            ;required for ssh connection
-		      :with-system-agent true                              ;required for ssh connection 
-	          :remote-path       "repo/parent/folder/on/remote"    ;required for sync code change
-	          :forwarding-port   9001                              ;optional for port forwarding
-	          :command           "lein run"                        ;optional for running cmd
+:remote-test {:user              "your-ssh-user"                ;required for ssh connection
+		      :host              "host-name-or-ip"              ;required for ssh connection
+		      :with-system-agent true                           ;required for ssh connection 
+	          :remote-path       "repo/parent/folder/on/remote" ;required for sync code change
+	          :forwarding-port   9001                           ;optional for port forwarding
+	          :command           "lein run"                     ;optional for running cmd
 	         }
 ```
 
 
-if `:remote-test` can not be found in the project, `remote-test-refresh` will ask you all those parameters at the runtime. If `:with-system-agent` is set to false, `remote-test-refresh` you will ue a separated ssh-agent to connect to remote host. `remote-test-refresh` will ask you for ssh auth at runtime.
+`remote-path` specifies the  absolute path of the parent folder on remote machine. `remote-test-refresh` must know it in order to apply code change to project repository correctly.
+
+if `:remote-test` can not be found in the project.clj/profiles, `remote-test-refresh` will ask you all those parameters at the runtime. 
+
+If `:with-system-agent` is set to false, `remote-test-refresh` you will ue a separated ssh-agent to connect to remote host. `remote-test-refresh` will ask you for ssh auth at runtime.
 
 To start `remote-test-refresh` :
 
@@ -56,8 +60,6 @@ To start `remote-test-refresh` :
       Application starting ...
     ...
     
-
 ## License
 
-Copyright © 2016 
-Distributed under the Eclipse Public License version 1.0.
+Copyright © 2016 Distributed under the Eclipse Public License version 1.0.
