@@ -56,8 +56,8 @@
                           (filter #(= :failed (:status %)))
                           (reduce str))]
     (if (empty? failed-steps)
-      {:status :success :msg "* Change has been transfered successfully to your remote repository"}
-      {:status :failed :msg (str "* Transfer per SSH failed in: " failed-steps)})))
+      {:status :success :msg "Change has been transferred successfully"}
+      {:status :failed :msg (str "Transfer per SSH failed in: " failed-steps)})))
 
 ;;; MAIN
 
@@ -80,11 +80,21 @@
     (with-open [rdr (io/reader output)]
       (doseq [line (line-seq rdr)] (m/info line)))))
 
-(defn log [console]
-  (while true
-    (let [{msg :msg} (async/<!! console)]
-      (m/info "\n" msg "\n")
-      (Thread/sleep WAIT-TIME))))
+(defn create-notify-command [notify-cmd msg]
+  (let [cmd (if (string? notify-cmd) [notify-cmd] notify-cmd)]
+    (concat cmd [(str/replace msg #"\*" "")])))
+
+(defn notify-log [console parameters]
+  (let [notify-cmd (:notify-command parameters)
+        should-notify? (and (not (nil? notify-cmd)) (not (empty? notify-cmd)))]
+    (while true
+      (let [{msg :msg} (async/<!! console)]
+        (m/info "*" msg)
+        (when should-notify?
+          (try
+            (apply sh/sh (create-notify-command notify-cmd msg))
+            (catch Exception e (m/info "* Could not notify: " (.getMessage e)))))
+        (Thread/sleep WAIT-TIME)))))
 
 (defn endless-loop []
   (while true (Thread/sleep WAIT-TIME)))
@@ -113,7 +123,7 @@
 (defn start-remote-routine [session asset-paths parameters]
   (let [console (async/chan)]
     (future (sync-code-change console session asset-paths parameters))
-    (future (log console))
+    (future (notify-log console parameters))
     (run-command-and-forward-port session parameters)))
 
 (defn session-option [parameters with-system-agent?]
@@ -177,12 +187,17 @@
                              "* ==> Enter a port  > 1023 if you need a port to be forwarded (optional):"
                              u/parse-port
                              #(or (= :empty %) (valid-port? %))))
-        parameters {:repo            project-name
-                    :user            user
-                    :auth            auth
-                    :host            host
-                    :command         command
-                    :remote-path     (normalize-remote-path path)}]
+
+        forwarding-parameter (if (= :empty forwarding-port) {} {:forwarding-port forwarding-port})
+
+        required-parameters {:repo            project-name
+                             :user            user
+                             :auth            auth
+                             :host            host
+                             :command         command
+                             :remote-path     (normalize-remote-path path)}
+
+        notify-parameter {:notify-command  (get-in project [:remote-test :notify-command])}]
 
     (assert (not (empty? project-name)) project-name)
     (assert (not (empty? user)) user)
@@ -190,9 +205,7 @@
     (assert (not (empty? path)) path)
     (assert (not (empty? auth)) auth)
 
-    (if (= :empty forwarding-port)
-      parameters
-      (merge parameters {:forwarding-port forwarding-port}))))
+    (merge required-parameters forwarding-parameter notify-parameter)))
 
 (defn find-asset-paths [project]
   (->> (concat (:source-paths project ["src"])

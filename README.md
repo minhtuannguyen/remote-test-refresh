@@ -50,7 +50,7 @@ If `:with-system-agent` is set to false, `remote-test-refresh`  will use a separ
 To start `remote-test-refresh` :
 
     $ lein remote-test-refresh
-    * Remote-Test-Refresh version: 0.1.7
+    * Remote-Test-Refresh version: 0.1.8
     
     * ==> Which command do you want to run on the repository of remote machine (optional): lein run  
     * ==> Enter port if you need a port to be forwarded (optional): 8080
@@ -58,7 +58,7 @@ To start `remote-test-refresh` :
     * Starting with the parameters: {:repo "repo", :user "user", :auth {:with-system-agent false, :password ***}, :host 1.2.3.4, :remote-path /folder/path/}
     * Starting session the parameters: {:username "user", :strict-host-key-checking :no, :password ***, :use-system-ssh-agent false}
     
-    * Change has been transfered successfully to your remote repository
+    * Change has been transferred successfully
       Application starting ...
     ...
 

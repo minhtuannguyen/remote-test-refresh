@@ -29,6 +29,7 @@
             :repo            "project"
             :user            "user"
             :command         "ls"
+            :notify-command  nil
             :forwarding-port 90
             :auth            {:with-system-agent true}}
 
@@ -46,6 +47,7 @@
           :command         "ls"
           :forwarding-port 90
           :auth            {:with-system-agent true}
+          :notify-command  ["hi"]
           :repo            "project"
           :user            "user"}
          (-> {:name        "project"
@@ -53,6 +55,7 @@
                             :password          "secret"
                             :host              "host"
                             :forwarding-port   90
+                            :notify-command    ["hi"]
                             :with-system-agent true
                             :command           "ls"
                             :remote-path       "path"}}
@@ -86,3 +89,9 @@
   (is (false? (rt/valid-port? :invalid)))
   (is (false? (rt/valid-port? 1)))
   (is (true? (rt/valid-port? 1024))))
+
+(deftest ^:unit test-create-notify-command
+  (is (= ["do notify" "msg"]
+         (rt/create-notify-command "do notify" "msg")))
+  (is (= ["do" "notify" "msg"]
+         (rt/create-notify-command ["do" "notify"] "msg"))))
