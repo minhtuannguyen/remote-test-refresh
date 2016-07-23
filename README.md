@@ -7,14 +7,14 @@
 
 [![Clojars Project](http://clojars.org/minhtuannguyen/remote-test-refresh/latest-version.svg)](https://clojars.org/minhtuannguyen/remote-test-refresh)
 
-`remote-test-refresh` is a leiningen plugin which uses SSH to synchronizes code changes between local and remote machine automatically. When running, `remote-test-refresh` will scan for all source and test resources defined in the project.clj. When detecting change, `remote-test-refresh` will transfer the diff per ssh and apply it to the remote repository.
+`remote-test-refresh` is a leiningen plugin which uses SSH to synchronize code changes between local and remote machine automatically. When running, `remote-test-refresh` will scan code resources in the local project for changes. When detecting change, `remote-test-refresh` will transfer it per ssh and apply it to the remote repository.
 
 In summary, `remote-test-refresh` offer possibilities:
    +  to synchronize code change between local and remote repository over ssh.
-   +  to run command (.i.e start application, run tests) on the remote repository and stream its output to local machine 
+   +  to run command (.i.e start application, run tests) in the project on the remote machine and stream its output to local machine. 
    +  to forward port between remote and local machine. It's useful to test application interactively.
    
-This picture explains how `remote-test-refresh` works:   
+This picture illustrates how `remote-test-refresh` leverages the SSH for synchronization: 
    
 ```ruby
 
@@ -22,12 +22,13 @@ This picture explains how `remote-test-refresh` works:
      |                     |     <----------SSH---------->     |                     | 
      | +--parent-folder    |      + transfer code change       | +--parent-folder    | 
      |    +-- project-1    |      + port forwarding            |   +-- project-1     | 
-     |    +-- project-2    |      + run command                |   +-- project-2     | 
+     |    +-- project-2    |      + run command remotely       |   +-- project-2     | 
      |---------------------|                                   |---------------------|  
 	                                                       
 ```
+  
    
-To configure `remote-test-refresh`,  you can define `:remote-test` in your .lein/profiles.clj.
+To configure `remote-test-refresh`,  you can define `:remote-test` in your `.lein/profiles.clj` or in `project.clj` of the local project repository:
 
 ```clojure
 :remote-test {:user              "your-ssh-user"                ;required for ssh connection
@@ -40,16 +41,16 @@ To configure `remote-test-refresh`,  you can define `:remote-test` in your .lein
 ```
 
 
-`remote-path` specifies the  absolute path of the parent folder on remote machine. `remote-test-refresh` must know it in order to apply code change to project repository correctly.
+`remote-path` specifies the  absolute path to the parent folder on remote machine. `remote-test-refresh` must know it, in order to apply code change to the remote repository correctly.
 
 if `:remote-test` can not be found in the project.clj/profiles, `remote-test-refresh` will ask you all those parameters at the runtime. 
 
-If `:with-system-agent` is set to false, `remote-test-refresh` you will use a separated ssh-agent to connect to remote machine. In this case, `remote-test-refresh` will ask you for ssh authentication at the runtime.
+If `:with-system-agent` is set to false, `remote-test-refresh`  will use a separated ssh agent to connect to remote machine. In this case, `remote-test-refresh` will ask you for ssh authentication at the runtime.
 
 To start `remote-test-refresh` :
 
     $ lein remote-test-refresh
-    * Remote-Test-Refresh version: 0.1.6
+    * Remote-Test-Refresh version: 0.1.7
     
     * ==> Which command do you want to run on the repository of remote machine (optional): lein run  
     * ==> Enter port if you need a port to be forwarded (optional): 8080
@@ -61,12 +62,17 @@ To start `remote-test-refresh` :
       Application starting ...
     ...
 
+
 # Issues
-If you have this problem under ubuntu when using system agent: java.lang.UnsatisfiedLinkError: Unable to load library 'c': /usr/lib/x86_64-linux-gnu/libc.so: invalid ELF header
+If you have this problem under ubuntu when using system agent option:
+
+     java.lang.UnsatisfiedLinkError: Unable to load library 'c': /usr/lib/x86_64-linux-gnu/libc.so: invalid ELF header
+    
+A solution could be:
 
     $ cd /lib/x86_64-linux-gnu
     $ sudo ln -s libc.so.6 libc.so
-    ...
+
 
 ## License
 
