@@ -44,12 +44,13 @@ To configure `remote-test-refresh`,  you can define `:remote-test` in your .lein
 
 if `:remote-test` can not be found in the project.clj/profiles, `remote-test-refresh` will ask you all those parameters at the runtime. 
 
-If `:with-system-agent` is set to false, `remote-test-refresh` you will ue a separated ssh-agent to connect to remote host. `remote-test-refresh` will ask you for ssh auth at runtime.
+If `:with-system-agent` is set to false, `remote-test-refresh` you will use a separated ssh-agent to connect to remote machine. In this case, `remote-test-refresh` will ask you for ssh authentication at the runtime.
 
 To start `remote-test-refresh` :
 
     $ lein remote-test-refresh
     * Remote-Test-Refresh version: 0.1.6
+    
     * ==> Which command do you want to run on the repository of remote machine (optional): lein run  
     * ==> Enter port if you need a port to be forwarded (optional): 8080
     
