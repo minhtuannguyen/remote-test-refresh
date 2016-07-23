@@ -50,7 +50,7 @@ If `:with-system-agent` is set to false, `remote-test-refresh`  will use a separ
 
 #Notification
 
-By defining `:notify-command` you will be notified every code change has been transferred successfully to remote machine. Currently it's tested for Mac OSX and Ubuntu.
+By defining `:notify-command` you will be notified every time code change has been transferred successfully to remote machine. Currently it's tested for Mac OSX and Ubuntu.
   
 On Mac:
    
@@ -82,10 +82,10 @@ To start `remote-test-refresh` :
     * Remote-Test-Refresh version: 0.1.8
     
     * ==> Which command do you want to run on the repository of remote machine (optional): lein run  
-    * ==> Enter port if you need a port to be forwarded (optional): 8080
+    * ==> Enter a port > 1023 if you need a port to be forwarded (optional): 8080
     
     * Starting with the parameters: {:repo "repo", :user "user", :auth {:with-system-agent false, :password ***}, :host 1.2.3.4, :remote-path /folder/path/}
-    * Starting session the parameters: {:username "user", :strict-host-key-checking :no, :password ***, :use-system-ssh-agent false}
+    * Starting session with the parameters: {:username "user", :strict-host-key-checking :no, :password ***, :use-system-ssh-agent false}
     
     * Change has been transferred successfully
       Application starting ...

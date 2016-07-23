@@ -139,7 +139,7 @@
         agent (ssh/ssh-agent {:use-system-ssh-agent with-system-agent?})
         session-params (session-option parameters with-system-agent?)
         session (ssh/session agent (:host parameters) session-params)]
-    (m/info "* Starting session the parameters:"
+    (m/info "* Starting session with the parameters:"
             (-> session-params
                 (assoc :password "***")
                 (assoc :use-system-ssh-agent with-system-agent?)) "\n")
@@ -155,7 +155,7 @@
 (defn ask-for-auth [project]
   (let [with-system-agent (or (get-in project [:remote-test :with-system-agent])
                               (u/ask-clear-text
-                               "* ==> Do you want to use system agent (y/n):"
+                               "* ==> Do you want to use ssh system agent (y/n):"
                                u/yes-or-no))]
     (if (or (= "y" with-system-agent) (true? with-system-agent))
       {:with-system-agent true}
@@ -184,7 +184,7 @@
 
         forwarding-port (or (get-in project [:remote-test :forwarding-port])
                             (u/ask-clear-text
-                             "* ==> Enter a port  > 1023 if you need a port to be forwarded (optional):"
+                             "* ==> Enter a port > 1023 if you need a port to be forwarded (optional):"
                              u/parse-port
                              #(or (= :empty %) (valid-port? %))))
 
