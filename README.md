@@ -16,12 +16,12 @@ Moreover, `remote-test-refresh` offer possibilities:
 To define the remote repository, you can define `:remote-test` in your .lein/profiles.clj.
 
 ```clojure
-:remote-test {:user             "your-username-on-remote-machine" ;required
-		      :host             "your.host.name-or-ip" ;required
-	          :remote-path      "/path/to/parent/folder/of/repo/on/remote/machine" ;required
+:remote-test {:user              "your-username-on-remote-machine" ;required
+		      :host              "your.host.name-or-ip" ;required
+	          :remote-path       "/path/to/parent/folder/of/repo/on/remote/machine" ;required
 	          :with-system-agent true ;required
-	          :forwarding-port  9001 ;optional
-	          :command          "lein run" ;optional 
+	          :forwarding-port   9001 ;optional
+	          :command           "lein run" ;optional 
 	         }
 ```
 
