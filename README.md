@@ -37,6 +37,7 @@ To configure `remote-test-refresh`,  you can define `:remote-test` in your `.lei
 	          :remote-path       "repo/parent/folder/on/remote" ;required for sync code change
 	          :forwarding-port   9001                           ;optional for port forwarding
 	          :command           "lein run"                     ;optional for running cmd
+	          :notify-command    ["terminal-notifier" "-title"] ;optional for notification
 	         }
 ```
 
@@ -46,6 +47,34 @@ To configure `remote-test-refresh`,  you can define `:remote-test` in your `.lei
 if `:remote-test` can not be found in the project.clj/profiles, `remote-test-refresh` will ask you all those parameters at the runtime. 
 
 If `:with-system-agent` is set to false, `remote-test-refresh`  will use a separated ssh agent to connect to remote machine. In this case, `remote-test-refresh` will ask you for ssh authentication at the runtime.
+
+#Notification
+
+By defining `:notify-command` you will be notified every code change has been transferred successfully to remote machine. Currently it's tested for Mac OSX and Ubuntu.
+  
+On Mac:
+   
+     # install terminal-notifier
+     $ brew install terminal-notifier
+
+```clojure
+:remote-test {:user "user"
+              ...
+              :notify-command  ["terminal-notifier" "-title" "Tests" "-message"]}
+```
+
+On Ubuntu:
+
+     # install notify
+     $ sudo apt-get install libnotify-bin
+
+```clojure
+:remote-test {:user "user"
+              ...
+              :notify-command  ["notify-send" "Tests"]}
+```
+
+#Usage
 
 To start `remote-test-refresh` :
 
