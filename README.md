@@ -17,30 +17,35 @@ To define the remote repository, you can define `:remote-test` in your .lein/pro
 
 ```clojure
 :remote-test {:user             "your-username-on-remote-machine" ;required
-              :password         "secret" ;required
 		      :host             "your.host.name-or-ip" ;required
 	          :remote-path      "/path/to/parent/folder/of/repo/on/remote/machine" ;required
+	          :with-system-agent true ;required
 	          :forwarding-port  9001 ;optional
 	          :command          "lein run" ;optional 
 	         }
 ```
 
+
 if `:remote-test` can not be found in the project, `remote-test-refresh` will ask you all those parameters at the runtime.
+
+if `:with-system-agent` is set to false, `remote-test-refresh` you will ue a separated ssh-agent to connect to remote host. `remote-test-refresh` will ask you for ssh auth at runtime.
 
 To start `remote-test-refresh` :
 
     $ lein remote-test-refresh
-    * Remote-Test-Refresh version: 0.1.3
-    * ==> Please enter your ssh password:
-    * Starting with the parameters: {:repo "repo", :user "user", :password ***, :host 1.2.3.4, :remote-path /folder/path/ }
+    * Remote-Test-Refresh version: 0.1.6
+    * ==> Which command do you want to run on the repository of remote machine (optional): lein run  
+    * ==> Enter port if you need a port to be forwarded (optional): 8080
     
-    * Change has been transfered successfully to your remote repo
-    * Change has been transfered successfully to your remote repo
+    * Starting with the parameters: {:repo "repo", :user "user", :auth {:with-system-agent false, :password ***}, :host 1.2.3.4, :remote-path /folder/path/}
+    * Starting session the parameters: {:username "user", :strict-host-key-checking :no, :password ***, :use-system-ssh-agent false}
+    
+    * Change has been transfered successfully to your remote repository
+      Application starting ...
     ...
     
 
 ## License
 
 Copyright © 2016 
-
-Distributed under the Eclipse Public License either version 1.0.
+Distributed under the Eclipse Public License version 1.0.

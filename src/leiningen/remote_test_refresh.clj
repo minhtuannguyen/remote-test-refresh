@@ -125,7 +125,7 @@
       (merge default-option {:password (get-in parameters [:auth :password])}))))
 
 (defn create-session [parameters]
-  (m/info "* Starting with the parameters:" (assoc-in parameters [:auth :password] "***"))
+  (m/info "\n" "* Starting with the parameters:" (assoc-in parameters [:auth :password] "***"))
   (let [with-system-agent? (get-in parameters [:auth :with-system-agent])
         agent (ssh/ssh-agent {:use-system-ssh-agent with-system-agent?})
         session-params (session-option parameters with-system-agent?)
