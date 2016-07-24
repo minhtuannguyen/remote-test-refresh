@@ -1,10 +1,9 @@
 # remote-test-refresh
 
-[![Join the chat at https://gitter.im/minhtuannguyen/remote-test-refresh](https://badges.gitter.im/minhtuannguyen/remote-test-refresh.svg)](https://gitter.im/minhtuannguyen/remote-test-refresh?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
 [![Build Status](https://travis-ci.org/minhtuannguyen/remote-test-refresh.svg?branch=master)](https://travis-ci.org/minhtuannguyen/remote-test-refresh)
 [![Coverage Status](https://coveralls.io/repos/github/minhtuannguyen/remote-test-refresh/badge.svg?branch=master)](https://coveralls.io/github/minhtuannguyen/remote-test-refresh?branch=master)
 [![Dependencies Status](http://jarkeeper.com/minhtuannguyen/remote-test-refresh/status.svg)](http://jarkeeper.com/minhtuannguyen/remote-test-refresh)
+[![Join the chat at https://gitter.im/minhtuannguyen/remote-test-refresh](https://badges.gitter.im/minhtuannguyen/remote-test-refresh.svg)](https://gitter.im/minhtuannguyen/remote-test-refresh?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 
 [![Clojars Project](http://clojars.org/minhtuannguyen/remote-test-refresh/latest-version.svg)](https://clojars.org/minhtuannguyen/remote-test-refresh)
