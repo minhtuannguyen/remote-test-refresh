@@ -20,7 +20,6 @@
   (is (false? (u/yes-or-no "ja"))))
 
 (deftest ^:unit test-read-artifact-version-from
-  (is (= "0.2.0" (u/read-artifact-version-from "test-resources/test.properties")))
   (is (= "unknown" (u/read-artifact-version-from "test-resources/unknown.properties"))))
 
 (deftest ^:unit test-ask-user
