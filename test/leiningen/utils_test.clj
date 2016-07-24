@@ -18,3 +18,19 @@
   (is (false? (u/yes-or-no "")))
   (is (false? (u/yes-or-no nil)))
   (is (false? (u/yes-or-no "ja"))))
+
+(deftest ^:unit test-read-artifact-version-from
+  (is (= "0.2.0" (u/read-artifact-version-from "test-resources/test.properties")))
+  (is (= "unknown" (u/read-artifact-version-from "test-resources/unknown.properties"))))
+
+(deftest ^:unit test-ask-user
+  (let [capture-fn (fn [x] "answer")
+        question ""
+        validate-fn (fn [x] true)]
+    (is (= "answer" (u/ask-user capture-fn question validate-fn))))
+
+  (let [answer-seq (atom ["wrong answer" "right answer"])
+        capture-fn (fn [_] (let [[f & r] @answer-seq] (reset! answer-seq r) f))
+        question ""
+        validate-fn (fn [x] (= "right answer" x))]
+    (is (= "right answer" (u/ask-user capture-fn question validate-fn)))))
