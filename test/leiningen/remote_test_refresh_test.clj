@@ -95,3 +95,30 @@
          (rt/create-notify-command "do notify" "msg")))
   (is (= ["do" "notify" "msg"]
          (rt/create-notify-command ["do" "notify"] "msg"))))
+
+(deftest ^:unit test-has-port?
+  (is (false? (rt/has-port? {:foo :bar})))
+  (is (false? (rt/has-port? {})))
+  (is (false? (rt/has-port? nil)))
+  (is (true? (rt/has-port? {:forwarding-port 20}))))
+
+(deftest ^:unit test-notify
+  (let [state-shell (atom [])
+        state-log (atom [])
+        log (fn [& args] (reset! state-log args))
+        shell (fn [& args] (reset! state-shell args))
+        notify-cmd ["do" "something"]
+        msg "msg"
+        _ (rt/notify shell log notify-cmd msg)]
+    (is (= ["do" "something" "msg"] @state-shell))
+    (is (= ["*" "msg"] @state-log)))
+
+  (let [state-shell (atom [])
+        shell (fn [& args] (reset! state-shell args))
+        state-log (atom [])
+        log (fn [& args] (reset! state-log args))
+        notify-cmd []
+        msg "msg"
+        _ (rt/notify shell log notify-cmd msg)]
+    (is (= [] @state-shell))
+    (is (= ["*" "msg"] @state-log))))

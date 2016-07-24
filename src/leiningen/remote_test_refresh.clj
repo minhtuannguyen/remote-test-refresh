@@ -71,7 +71,9 @@
     (recur)))
 
 (defn valid-port? [port]
-  (and (not= :empty port) (not= :invalid port) (> port 1023)))
+  (and (not= :empty port)
+       (not= :invalid port)
+       (> port 1023)))
 
 (defn has-port? [parameters]
   (contains? parameters :forwarding-port))
@@ -86,13 +88,13 @@
     (with-open [rdr (io/reader output)]
       (doseq [line (line-seq rdr)] (m/info line)))))
 
-(defn notify [shell notify-cmd msg]
+(defn notify [shell log notify-cmd msg]
   (let [should-notify? (not (empty? notify-cmd))]
     (when should-notify?
       (try
         (apply shell (create-notify-command notify-cmd msg))
         (catch Exception e (m/info "* Could not notify: " (.getMessage e))))))
-  (m/info "*" msg))
+  (log "*" msg))
 
 (defn run-command-and-forward-port [session parameters]
   (let [{port :forwarding-port cmd :command} parameters
@@ -111,7 +113,7 @@
 
 (defn notify-log [console parameters]
   (async/go-loop [{msg :msg} (async/<! console)]
-    (notify sh/sh (:notify-command parameters) msg)
+    (notify sh/sh m/info (:notify-command parameters) msg)
     (recur (async/<! console))))
 
 (defn log-to [console msg]
