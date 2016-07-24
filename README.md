@@ -32,14 +32,14 @@ This picture illustrates how `remote-test-refresh` leverages the SSH for synchro
 To configure `remote-test-refresh`,  you can define `:remote-test` in your `.lein/profiles.clj` or in `project.clj` of the local project repository:
 
 ```clojure
-:remote-test {:user              "your-ssh-user"                ;required for ssh connection
-		      :host              "host-name-or-ip"              ;required for ssh connection
-		      :with-system-agent true                           ;required for ssh connection 
-	          :remote-path       "repo/parent/folder/on/remote" ;required for sync code change
-	          :forwarding-port   9001                           ;optional for port forwarding
-	          :command           "lein run"                     ;optional for running cmd
-	          :notify-command    ["terminal-notifier" "-title"] ;optional for notification
-	         }
+:remote-test {:user              "your-ssh-user"                  ;required for ssh connection
+		      :host              "host-name-or-ip"                ;required for ssh connection
+		      :with-system-agent true                             ;required for ssh connection 
+	          :remote-path       "parent/folder/path/on/remote"   ;required for sync code change
+	          :forwarding-port   9001                             ;optional for port forwarding
+	          :command           "lein run"                       ;optional for running cmd
+	          :notify-command    ["terminal-notifier" "-title"] } ;optional for notification
+	         
 ```
 
 
