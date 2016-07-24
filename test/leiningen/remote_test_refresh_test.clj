@@ -122,3 +122,8 @@
         _ (rt/notify shell log notify-cmd msg)]
     (is (= [] @state-shell))
     (is (= ["*" "msg"] @state-log))))
+
+(deftest ^:unit test-should-use-system-agent?
+  (is (true? (rt/should-use-system-agent? true)))
+  (is (true? (rt/should-use-system-agent? "y")))
+  (is (false? (rt/should-use-system-agent? "n"))))

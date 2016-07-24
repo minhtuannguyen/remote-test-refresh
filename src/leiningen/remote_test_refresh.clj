@@ -163,14 +163,17 @@
       lower-case-path
       (str lower-case-path "/"))))
 
+(defn should-use-system-agent? [with-system-agent]
+  (or (= "y" with-system-agent)
+      (true? with-system-agent)))
+
 (defn ask-for-auth [project]
   (let [with-system-agent (or (get-in project [:remote-test :with-system-agent])
                               (u/ask-clear-text
                                "* ==> Do you want to use ssh system agent (y/n):"
-                               u/yes-or-no))
-        should-use-system-agent? (or (= "y" with-system-agent)
-                                     (true? with-system-agent))]
-    (if should-use-system-agent?
+                               identity
+                               u/yes-or-no))]
+    (if (should-use-system-agent? with-system-agent)
       {:with-system-agent true}
       {:with-system-agent false
        :password          (u/ask-for-password
