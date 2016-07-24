@@ -49,6 +49,24 @@ if `:remote-test` can not be found in the project.clj/profiles, `remote-test-ref
 
 If `:with-system-agent` is set to false, `remote-test-refresh`  will use a separated ssh agent to connect to remote machine. In this case, `remote-test-refresh` will ask you for ssh authentication at the runtime.
 
+#Usage
+
+To start `remote-test-refresh` :
+
+    $ lein remote-test-refresh
+    * Remote-Test-Refresh version: 0.1.8
+    
+    * ==> Which command do you want to run on the repository of remote machine (optional): lein run  
+    * ==> Enter a port > 1023 if you need a port to be forwarded (optional): 8080
+    
+    * Starting with the parameters: {:repo "repo", :user "user", :auth {:with-system-agent false, :password ***}, :host 1.2.3.4, :remote-path /folder/path/}
+    * Starting session with the parameters: {:username "user", :strict-host-key-checking :no, :password ***, :use-system-ssh-agent false}
+    
+    * Change has been transferred successfully
+      Application starting ...
+    ...
+
+
 #Notification
 
 By defining `:notify-command` you will be notified every time code change has been transferred successfully to remote machine. Currently it's tested for Mac OSX and Ubuntu.
@@ -74,24 +92,6 @@ On Ubuntu:
               ...
               :notify-command  ["notify-send" "Tests"]}
 ```
-
-#Usage
-
-To start `remote-test-refresh` :
-
-    $ lein remote-test-refresh
-    * Remote-Test-Refresh version: 0.1.8
-    
-    * ==> Which command do you want to run on the repository of remote machine (optional): lein run  
-    * ==> Enter a port > 1023 if you need a port to be forwarded (optional): 8080
-    
-    * Starting with the parameters: {:repo "repo", :user "user", :auth {:with-system-agent false, :password ***}, :host 1.2.3.4, :remote-path /folder/path/}
-    * Starting session with the parameters: {:username "user", :strict-host-key-checking :no, :password ***, :use-system-ssh-agent false}
-    
-    * Change has been transferred successfully
-      Application starting ...
-    ...
-
 
 # Issues
 If you have this problem under ubuntu when using system agent option:
