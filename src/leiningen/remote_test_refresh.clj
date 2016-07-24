@@ -61,6 +61,62 @@
 
 ;;; MAIN
 
+(defn create-notify-command [notify-cmd msg]
+  (let [cmd (if (string? notify-cmd) [notify-cmd] notify-cmd)]
+    (concat cmd [(str/replace msg #"\*" "")])))
+
+(defn endless-loop []
+  (loop []
+    (Thread/sleep WAIT-TIME)
+    (recur)))
+
+(defn valid-port? [port]
+  (and (not= :empty port) (not= :invalid port) (> port 1023)))
+
+(defn has-port? [parameters]
+  (contains? parameters :forwarding-port))
+
+(defn run-cmd-remotely [{run-command :command repo :repo path :remote-path} session]
+  (let [output (->> {:cmd              (str "cd " path repo ";" run-command)
+                     :out              :stream
+                     :pty              true
+                     :agent-forwarding true}
+                    (ssh/ssh session)
+                    (:out-stream))]
+    (with-open [rdr (io/reader output)]
+      (doseq [line (line-seq rdr)] (m/info line)))))
+
+(defn notify [shell notify-cmd msg]
+  (let [should-notify? (not (empty? notify-cmd))]
+    (when should-notify?
+      (try
+        (apply shell (create-notify-command notify-cmd msg))
+        (catch Exception e (m/info "* Could not notify: " (.getMessage e))))))
+  (m/info "*" msg))
+
+(defn run-command-and-forward-port [session parameters]
+  (let [{port :forwarding-port cmd :command} parameters
+        has-cmd? (not (empty? cmd))]
+    (cond
+      (and (has-port? parameters) has-cmd?)
+      (ssh/with-local-port-forward [session port port] (run-cmd-remotely parameters session))
+
+      (and (not (has-port? parameters)) has-cmd?)
+      (run-cmd-remotely parameters session)
+
+      (has-port? parameters)
+      (ssh/with-local-port-forward [session port port] (endless-loop))
+
+      :else (endless-loop))))
+
+(defn notify-log [console parameters]
+  (async/go-loop [{msg :msg} (async/<! console)]
+    (notify sh/sh (:notify-command parameters) msg)
+    (recur (async/<! console))))
+
+(defn log-to [console msg]
+  (async/go (async/>! console msg)))
+
 (defn sync-code-change
   ([console session dirs parameters]
    (sync-code-change console session dirs parameters (apply dir/scan (t/tracker) dirs)))
@@ -69,61 +125,14 @@
      (if (not= new-tracker old-tracker)
        (->> TRANSFER-STEPS
             (transfer-per-ssh parameters session)
-            (async/>!! console))
+            (log-to console))
        (Thread/sleep WAIT-TIME))
      (recur console session dirs parameters new-tracker))))
-
-(defn run-command-remotely [{run-command :command repo :repo path :remote-path} session]
-  (let [output (->> {:cmd (str "cd " path repo ";" run-command ";") :out :stream :pty true :agent-forwarding true}
-                    (ssh/ssh session)
-                    (:out-stream))]
-    (with-open [rdr (io/reader output)]
-      (doseq [line (line-seq rdr)] (m/info line)))))
-
-(defn create-notify-command [notify-cmd msg]
-  (let [cmd (if (string? notify-cmd) [notify-cmd] notify-cmd)]
-    (concat cmd [(str/replace msg #"\*" "")])))
-
-(defn notify-log [console parameters]
-  (let [notify-cmd (:notify-command parameters)
-        should-notify? (and (not (nil? notify-cmd)) (not (empty? notify-cmd)))]
-    (while true
-      (let [{msg :msg} (async/<!! console)]
-        (m/info "*" msg)
-        (when should-notify?
-          (try
-            (apply sh/sh (create-notify-command notify-cmd msg))
-            (catch Exception e (m/info "* Could not notify: " (.getMessage e)))))
-        (Thread/sleep WAIT-TIME)))))
-
-(defn endless-loop []
-  (while true (Thread/sleep WAIT-TIME)))
-
-(defn valid-port? [port]
-  (and (not= :empty port) (not= :invalid port) (> port 1023)))
-
-(defn has-port? [parameters]
-  (contains? parameters :forwarding-port))
-
-(defn run-command-and-forward-port [session parameters]
-  (let [{port :forwarding-port command :command} parameters]
-    (cond
-      (and (has-port? parameters) (not (empty? command)))
-      (ssh/with-local-port-forward [session port port]
-        (run-command-remotely parameters session))
-
-      (and (not (has-port? parameters)) (not (empty? command)))
-      (run-command-remotely parameters session)
-
-      (has-port? parameters)
-      (ssh/with-local-port-forward [session port port] (endless-loop))
-
-      :else (endless-loop))))
 
 (defn start-remote-routine [session asset-paths parameters]
   (let [console (async/chan)]
     (future (sync-code-change console session asset-paths parameters))
-    (future (notify-log console parameters))
+    (notify-log console parameters)
     (run-command-and-forward-port session parameters)))
 
 (defn session-option [parameters with-system-agent?]
@@ -156,12 +165,15 @@
   (let [with-system-agent (or (get-in project [:remote-test :with-system-agent])
                               (u/ask-clear-text
                                "* ==> Do you want to use ssh system agent (y/n):"
-                               u/yes-or-no))]
-    (if (or (= "y" with-system-agent) (true? with-system-agent))
+                               u/yes-or-no))
+        should-use-system-agent? (or (= "y" with-system-agent)
+                                     (true? with-system-agent))]
+    (if should-use-system-agent?
       {:with-system-agent true}
       {:with-system-agent false
        :password          (u/ask-for-password
-                           "* ==> Please enter your ssh password:")})))
+                           "* ==> Please enter your ssh password:"
+                           #(not (empty? %)))})))
 
 (defn ask-for-parameters [project]
   (let [project-name (:name project)
@@ -197,14 +209,14 @@
 
         forwarding-parameter (if (= :empty forwarding-port) {} {:forwarding-port forwarding-port})
 
-        required-parameters {:repo            project-name
-                             :user            user
-                             :auth            auth
-                             :host            host
-                             :command         command
-                             :remote-path     (normalize-remote-path path)}
+        required-parameters {:repo        project-name
+                             :user        user
+                             :auth        auth
+                             :host        host
+                             :command     command
+                             :remote-path (normalize-remote-path path)}
 
-        notify-parameter {:notify-command  (get-in project [:remote-test :notify-command])}]
+        notify-parameter {:notify-command (get-in project [:remote-test :notify-command])}]
 
     (assert (not (empty? project-name)) project-name)
     (assert (not (empty? user)) user)
