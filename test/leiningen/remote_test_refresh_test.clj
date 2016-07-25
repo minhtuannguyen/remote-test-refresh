@@ -23,43 +23,32 @@
                (set))))))
 
 (deftest ^:unit test-start-parameters
-  (testing "correct path"
-    (is (= {:host            "host"
-            :remote-path     "path/"
-            :repo            "project"
-            :user            "user"
-            :command         "ls"
-            :notify-command  nil
-            :forwarding-port 90
-            :auth            {:with-system-agent true}}
-
-           (-> {:name        "project"
-                :remote-test {:user              "user"
-                              :host              "host"
-                              :command           "ls"
-                              :forwarding-port   90
-                              :with-system-agent true
-                              :remote-path       "path/"}}
-               (rt/ask-for-parameters)))))
-
   (is (= {:host            "host"
           :remote-path     "path/"
-          :command         "ls"
-          :forwarding-port 90
-          :auth            {:with-system-agent true}
-          :notify-command  ["hi"]
           :repo            "project"
-          :user            "user"}
+          :user            "user"
+          :command         "ls"
+          :notify-command  nil
+          :forwarding-port 90
+          :auth            {:with-system-agent true}}
          (-> {:name        "project"
               :remote-test {:user              "user"
-                            :password          "secret"
                             :host              "host"
-                            :forwarding-port   90
-                            :notify-command    ["hi"]
-                            :with-system-agent true
                             :command           "ls"
-                            :remote-path       "path"}}
-             (rt/ask-for-parameters)))))
+                            :forwarding-port   90
+                            :with-system-agent true
+                            :remote-path       "path/"}}
+             (rt/ask-for-parameters))))
+
+  (is (= {:with-system-agent true}
+         (-> {:name        "project"
+              :remote-test {:with-system-agent true}}
+             (rt/ask-for-auth)))))
+
+(deftest ^:unit test-normalize-remote-path
+  (is (= "/path/to/"
+         (rt/normalize-remote-path "/path/to")
+         (rt/normalize-remote-path "/path/to/"))))
 
 (deftest ^:unit test-transfer-per-ssh
   (testing "check for correct status"
@@ -139,7 +128,9 @@
 (deftest ^:unit test-run-cmd-remotely
   (let [log-state (atom [])
         options-state (atom {})
-        ssh (fn [_ options] (reset! options-state options) {:out-stream "test-resources/console.txt"})
+        ssh (fn [_ options]
+              (reset! options-state options)
+              {:out-stream "test-resources/console.txt"})
         log (fn [& args] (swap! log-state conj args))
         parameter {:command "do somthing" :repo "repo-name" :remote-path "repo-path"}
         session {}
@@ -152,3 +143,143 @@
            @options-state))
 
     (is (= [["some line 1"] ["some line 2"]] @log-state))))
+
+(deftest ^:unit test-run-command-and-forward-port
+  (testing "port-forward and run-command should be started here"
+    (let [ssh-state (atom {})
+          log-state (atom {})
+          forward-port-state (atom {})
+
+          transfer-cmd {:ssh          (fn [_ options]
+                                        (reset! ssh-state options)
+                                        {:out-stream "test-resources/console.txt"})
+                        :log          (fn [& args] (reset! log-state args))
+                        :forward-port (fn [session port func]
+                                        (func)
+                                        (reset! forward-port-state {:port    port
+                                                                    :session session}))}
+          parameter {:forwarding-port 9000 :command "run cmd"}
+          session {:my :session}]
+      (rt/run-command-and-forward-port session parameter transfer-cmd)
+      (is (= {:agent-forwarding true, :cmd "cd ;run cmd", :out :stream, :pty true} @ssh-state))
+      (is (= ["some line 2"] @log-state))
+      (is (= {:port 9000 :session session} @forward-port-state))))
+
+  (testing "only run-cmd-remotely should be invoked here"
+    (let [ssh-state (atom {})
+          log-state (atom {})
+          forward-port-state (atom {})
+          transfer-cmd {:ssh          (fn [_ options]
+                                        (reset! ssh-state options)
+                                        {:out-stream "test-resources/console.txt"})
+                        :log          (fn [& args] (reset! log-state args))
+                        :forward-port (fn [_ _ _] (reset! forward-port-state {:foo :bar}))}
+          parameter {:command "run cmd"}
+          session {:my :session}]
+
+      (rt/run-command-and-forward-port session parameter transfer-cmd)
+      (is (= {} @forward-port-state))
+      (is (= {:agent-forwarding true, :cmd "cd ;run cmd", :out :stream, :pty true} @ssh-state))
+      (is (= ["some line 2"] @log-state))))
+
+  (testing "only port-forward should be invoked here"
+    (let [ssh-state (atom {})
+          log-state (atom {})
+          forward-port-state (atom {})
+          transfer-cmd {:ssh          (fn [_ options]
+                                        (reset! ssh-state options)
+                                        {:out-stream "test-resources/console.txt"})
+                        :log          (fn [& args] (reset! log-state args))
+                        :forward-port (fn [session port func]
+                                        (reset! forward-port-state {:port    port
+                                                                    :session session}))}
+          parameter {:forwarding-port 9000}
+          session {:my :session}]
+
+      (rt/run-command-and-forward-port session parameter transfer-cmd)
+      (is (= {:port 9000 :session session} @forward-port-state))
+      (is (= {} @ssh-state))
+      (is (= {} @log-state))))
+
+  (testing "only endless loop should be started"
+    (let [ssh-state (atom {})
+          log-state (atom {})
+          forward-port-state (atom {})
+          transfer-cmd {:ssh          (fn [_ options]
+                                        (reset! ssh-state options)
+                                        {:out-stream "test-resources/console.txt"})
+                        :log          (fn [& args] (reset! log-state args))
+                        :loop         (fn [] "endless loop")
+                        :forward-port (fn [session port func]
+                                        (reset! forward-port-state {:port    port
+                                                                    :session session}))}
+          parameter {}
+          session {:my :session}
+          status (rt/run-command-and-forward-port session parameter transfer-cmd)]
+
+      (is (= "endless loop" status))
+      (is (= {} @forward-port-state))
+      (is (= {} @ssh-state))
+      (is (= {} @log-state)))))
+
+(deftest ^:unit test-create-patch!
+  (testing "port-forward and run-command should be started here"
+    (let [shell-state (atom {})
+          transfer-cmd {:shell (fn [& args]
+                                 (reset! shell-state args)
+                                 (throw (new RuntimeException "ex")))}
+          status (rt/create-patch! transfer-cmd {} {})]
+      (is (= ["git" "diff" "HEAD"] @shell-state))
+      (is (= {:step :create-patch :status :failed :error "ex"} status)))))
+
+(deftest ^:unit test-apply-patch!
+  (testing "apply path successful"
+    (let [ssh-state (atom {})
+          transfer-cmd {:ssh (fn [_ options]
+                               (reset! ssh-state options)
+                               {:exit 0})}
+          parameters {:repo "repo" :remote-path "path/to/"}
+          session {:my :session}
+          status (rt/apply-patch! transfer-cmd parameters session)]
+      (is (= {:agent-forwarding true
+              :cmd              (str "cd path/to/repo;git reset --hard;"
+                                     "git apply --whitespace=warn test-refresh.remote.patch;"
+                                     "rm -f test-refresh.remote.patch;")}
+             @ssh-state))
+      (is (= {:status :success :step :apply-patch} status))))
+
+  (testing "apply path failed"
+    (let [transfer-cmd {:ssh (fn [_ _] {:exit 1 :err "so wrong"})}
+          parameters {:repo "repo" :remote-path "path/to/"}
+          session {:my :session}
+          status (rt/apply-patch! transfer-cmd parameters session)]
+      (is (= {:error "so wrong" :status :failed :step :apply-patch} status)))))
+
+(deftest ^:unit test-upload-patch!
+  (testing "update successful"
+    (let [shell-state (atom {})
+          scp-state (atom {})
+          transfer-cmd {:scp   (fn [session from to]
+                                 (reset! scp-state {:session session :from from :to to}))
+                        :shell (fn [& args] (reset! shell-state args) {:exit 0})}
+          parameters {:repo "repo" :remote-path "path/to/"}
+          session {:my :session}
+          status (rt/upload-patch! transfer-cmd parameters session)]
+      (is (= ["rm" "-f" "test-refresh-local.patch"] @shell-state))
+      (is (= {:from    "test-refresh-local.patch"
+              :session {:my :session}
+              :to      "path/to/repo/test-refresh.remote.patch"}
+             @scp-state))
+      (is (= {:status :success :step :upload-patch} status))))
+
+  (testing "update failed"
+    (let [transfer-cmd {:scp   (fn [_ _ _])
+                        :shell (fn [& _] {:exit 1 :err "so wrong"})}
+          parameters {:repo "repo" :remote-path "path/to/"}
+          session {:my :session}
+          status (rt/upload-patch! transfer-cmd parameters session)]
+      (is (= {:error "so wrong" :status :failed :step :upload-patch} status)))))
+
+(deftest ^:unit test-remote-patch-file-path
+  (is (= "parent/path/repo/test-refresh.remote.patch"
+         (rt/create-remote-patch-file-path "parent/path/" "repo"))))

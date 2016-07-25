@@ -10,11 +10,12 @@
             [clojure.java.io :as io]))
 
 ;;; TRANSFER STEPS
+(def WAIT-TIME 500)
 (def verbose false)
 (def local-patch-file-name "test-refresh-local.patch")
 (def remote-patch-file-name "test-refresh.remote.patch")
 
-(defn remote-patch-file-path [remote-path repo]
+(defn create-remote-patch-file-path [remote-path repo]
   (str remote-path repo "/" remote-patch-file-name))
 
 (defn create-patch! [transfer-cmd _ _]
@@ -28,32 +29,35 @@
        (catch Exception e
          {:step :create-patch :status :failed :error (.getMessage e)})))
 
-(defn upload-patch! [transfer-cmd {repo :repo path :remote-path} session]
-  (let [_ ((:scp transfer-cmd) session local-patch-file-name (remote-patch-file-path path repo))
-        result-remove ((:shell transfer-cmd) "rm" "-f" local-patch-file-name)]
+(defn upload-patch! [{scp-to :scp sh :shell} {repo :repo path :remote-path} session]
+  (let [_ (scp-to session local-patch-file-name (create-remote-patch-file-path path repo))
+        result-remove (sh "rm" "-f" local-patch-file-name)]
     (if (zero? (:exit result-remove))
       {:step :upload-patch :status :success}
       {:step :upload-patch :status :failed :error (:err result-remove)})))
 
-(defn apply-patch! [transfer-cmd {repo :repo path :remote-path} session]
+(defn apply-patch! [{ssh :ssh} {repo :repo path :remote-path} session]
   (let [cmd (str "cd " path repo ";"
                  "git reset --hard;"
                  (str "git apply --whitespace=warn " remote-patch-file-name ";")
                  "rm -f " remote-patch-file-name ";")
-        result-apply-patch ((:ssh transfer-cmd) session {:cmd cmd :agent-forwarding true})]
+        result-apply-patch (ssh session {:cmd cmd :agent-forwarding true})]
     (if (zero? (:exit result-apply-patch))
       {:step :apply-patch :status :success}
       {:step :apply-patch :status :failed :error (:err result-apply-patch)})))
 
+(defn endless-loop []
+  (loop [] (Thread/sleep WAIT-TIME) (recur)))
+
 ;;; TRANSFER LOGIC
-(def WAIT-TIME 500)
 (def TRANSFER-STEPS [create-patch! upload-patch! apply-patch!])
 (def TRANSER-CMD {:shell        sh/sh
                   :scp          ssh/scp-to
                   :ssh          ssh/ssh
                   :forward-port (fn [session port func]
                                   (ssh/with-local-port-forward [session port port] (func)))
-                  :log          m/info})
+                  :log          m/info
+                  :loop         endless-loop})
 
 (defn transfer-per-ssh [parameters session transfer-cmd run-steps]
   (let [failed-steps (->> run-steps
@@ -69,11 +73,6 @@
 (defn create-notify-command [notify-cmd msg]
   (let [cmd (if (string? notify-cmd) [notify-cmd] notify-cmd)]
     (concat cmd [(str/replace msg #"\*" "")])))
-
-(defn endless-loop []
-  (loop []
-    (Thread/sleep WAIT-TIME)
-    (recur)))
 
 (defn valid-port? [port]
   (and (not= :empty port)
@@ -106,7 +105,7 @@
 
 (defn run-command-and-forward-port [session
                                     {port :forwarding-port cmd :command :as parameters}
-                                    {ssh :ssh port-forward :forward-port log :log}]
+                                    {ssh :ssh port-forward :forward-port log :log wait-loop :loop}]
   (let [has-cmd? (not (empty? cmd))]
     (cond
       (and (has-port? parameters) has-cmd?)
@@ -118,7 +117,7 @@
       (has-port? parameters)
       (port-forward session port endless-loop)
 
-      :else (endless-loop))))
+      :else (wait-loop))))
 
 (defn notify-log [console parameters {sh :shell log :log}]
   (async/go-loop [{msg :msg} (async/<! console)]
