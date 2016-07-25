@@ -63,15 +63,23 @@
 
 (deftest ^:unit test-transfer-per-ssh
   (testing "check for correct status"
-    (let [steps [(fn [_ _] {:status :success}) (fn [_ _] {:status :success})]
+    (let [transfer-cmd {:scp   (fn [])
+                        :ssh   (fn [])
+                        :shell (fn [])}
+          steps [(fn [_ _ _] {:status :success})
+                 (fn [_ _ _] {:status :success})]
           option {}
           session {}]
-      (is (= :success (:status (rt/transfer-per-ssh option session steps)))))
+      (is (= :success (:status (rt/transfer-per-ssh option session transfer-cmd steps)))))
 
-    (let [steps [(fn [_ _] {:status :failed}) (fn [_ _] {:status :success})]
+    (let [transfer-cmd {:scp   (fn [])
+                        :ssh   (fn [])
+                        :shell (fn [])}
+          steps [(fn [_ _ _] {:status :failed})
+                 (fn [_ _ _] {:status :success})]
           option {}
           session {}]
-      (is (= :failed (:status (rt/transfer-per-ssh option session steps)))))))
+      (is (= :failed (:status (rt/transfer-per-ssh option session transfer-cmd steps)))))))
 
 (deftest ^:unit test-session-option
   (testing "correct session option"
@@ -127,3 +135,20 @@
   (is (true? (rt/should-use-system-agent? true)))
   (is (true? (rt/should-use-system-agent? "y")))
   (is (false? (rt/should-use-system-agent? "n"))))
+
+(deftest ^:unit test-run-cmd-remotely
+  (let [log-state (atom [])
+        options-state (atom {})
+        ssh (fn [_ options] (reset! options-state options) {:out-stream "test-resources/console.txt"})
+        log (fn [& args] (swap! log-state conj args))
+        parameter {:command "do somthing" :repo "repo-name" :remote-path "repo-path"}
+        session {}
+        _ (rt/run-cmd-remotely ssh log parameter session)]
+
+    (is (= {:agent-forwarding true
+            :cmd              "cd repo-pathrepo-name;do somthing"
+            :out              :stream
+            :pty              true}
+           @options-state))
+
+    (is (= [["some line 1"] ["some line 2"]] @log-state))))

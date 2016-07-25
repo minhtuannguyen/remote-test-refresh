@@ -17,9 +17,9 @@
 (defn remote-patch-file-path [remote-path repo]
   (str remote-path repo "/" remote-patch-file-name))
 
-(defn create-patch! [_ _]
+(defn create-patch! [transfer-cmd _ _]
   (try (->> ["git" "diff" "HEAD"]
-            (apply sh/sh)
+            (apply (:shell transfer-cmd))
             (:out)
             (spit local-patch-file-name))
        (if (u/exists? local-patch-file-name)
@@ -28,31 +28,36 @@
        (catch Exception e
          {:step :create-patch :status :failed :error (.getMessage e)})))
 
-(defn upload-patch! [{repo :repo path :remote-path} session]
-  (let [_ (ssh/scp-to session local-patch-file-name (remote-patch-file-path path repo))
-        result-remove (sh/sh "rm" "-f" local-patch-file-name)]
+(defn upload-patch! [transfer-cmd {repo :repo path :remote-path} session]
+  (let [_ ((:scp transfer-cmd) session local-patch-file-name (remote-patch-file-path path repo))
+        result-remove ((:shell transfer-cmd) "rm" "-f" local-patch-file-name)]
     (if (zero? (:exit result-remove))
       {:step :upload-patch :status :success}
       {:step :upload-patch :status :failed :error (:err result-remove)})))
 
-(defn apply-patch! [{repo :repo path :remote-path} session]
+(defn apply-patch! [transfer-cmd {repo :repo path :remote-path} session]
   (let [cmd (str "cd " path repo ";"
                  "git reset --hard;"
                  (str "git apply --whitespace=warn " remote-patch-file-name ";")
                  "rm -f " remote-patch-file-name ";")
-        result-apply-patch (ssh/ssh session {:cmd cmd :agent-forwarding true})]
+        result-apply-patch ((:ssh transfer-cmd) session {:cmd cmd :agent-forwarding true})]
     (if (zero? (:exit result-apply-patch))
       {:step :apply-patch :status :success}
       {:step :apply-patch :status :failed :error (:err result-apply-patch)})))
 
 ;;; TRANSFER LOGIC
-
-(def TRANSFER-STEPS [create-patch! upload-patch! apply-patch!])
 (def WAIT-TIME 500)
+(def TRANSFER-STEPS [create-patch! upload-patch! apply-patch!])
+(def TRANSER-CMD {:shell        sh/sh
+                  :scp          ssh/scp-to
+                  :ssh          ssh/ssh
+                  :forward-port (fn [session port func]
+                                  (ssh/with-local-port-forward [session port port] (func)))
+                  :log          m/info})
 
-(defn transfer-per-ssh [parameters session run-steps]
+(defn transfer-per-ssh [parameters session transfer-cmd run-steps]
   (let [failed-steps (->> run-steps
-                          (map #(% parameters session))
+                          (map #(% transfer-cmd parameters session))
                           (filter #(= :failed (:status %)))
                           (reduce str))]
     (if (empty? failed-steps)
@@ -78,15 +83,18 @@
 (defn has-port? [parameters]
   (contains? parameters :forwarding-port))
 
-(defn run-cmd-remotely [{run-command :command repo :repo path :remote-path} session]
+(defn run-cmd-remotely [ssh
+                        log
+                        {run-command :command repo :repo path :remote-path}
+                        session]
   (let [output (->> {:cmd              (str "cd " path repo ";" run-command)
                      :out              :stream
                      :pty              true
                      :agent-forwarding true}
-                    (ssh/ssh session)
+                    (ssh session)
                     (:out-stream))]
     (with-open [rdr (io/reader output)]
-      (doseq [line (line-seq rdr)] (m/info line)))))
+      (doseq [line (line-seq rdr)] (log line)))))
 
 (defn notify [shell log notify-cmd msg]
   (let [should-notify? (not (empty? notify-cmd))]
@@ -96,46 +104,47 @@
         (catch Exception e (m/info "* Could not notify: " (.getMessage e))))))
   (log "*" msg))
 
-(defn run-command-and-forward-port [session parameters]
-  (let [{port :forwarding-port cmd :command} parameters
-        has-cmd? (not (empty? cmd))]
+(defn run-command-and-forward-port [session
+                                    {port :forwarding-port cmd :command :as parameters}
+                                    {ssh :ssh port-forward :forward-port log :log}]
+  (let [has-cmd? (not (empty? cmd))]
     (cond
       (and (has-port? parameters) has-cmd?)
-      (ssh/with-local-port-forward [session port port] (run-cmd-remotely parameters session))
+      (port-forward session port (partial run-cmd-remotely ssh log parameters session))
 
       (and (not (has-port? parameters)) has-cmd?)
-      (run-cmd-remotely parameters session)
+      (run-cmd-remotely ssh log parameters session)
 
       (has-port? parameters)
-      (ssh/with-local-port-forward [session port port] (endless-loop))
+      (port-forward session port endless-loop)
 
       :else (endless-loop))))
 
-(defn notify-log [console parameters]
+(defn notify-log [console parameters {sh :shell log :log}]
   (async/go-loop [{msg :msg} (async/<! console)]
-    (notify sh/sh m/info (:notify-command parameters) msg)
+    (notify sh log (:notify-command parameters) msg)
     (recur (async/<! console))))
 
 (defn log-to [console msg]
   (async/go (async/>! console msg)))
 
 (defn sync-code-change
-  ([console session dirs parameters]
-   (sync-code-change console session dirs parameters (apply dir/scan (t/tracker) dirs)))
-  ([console session dirs parameters old-tracker]
+  ([console session dirs parameters transfer-cmd transfer-steps]
+   (sync-code-change console session dirs parameters (apply dir/scan (t/tracker) dirs) transfer-cmd transfer-steps))
+  ([console session dirs parameters old-tracker transfer-cmd transfer-steps]
    (let [new-tracker (apply dir/scan old-tracker dirs)]
      (if (not= new-tracker old-tracker)
-       (->> TRANSFER-STEPS
-            (transfer-per-ssh parameters session)
+       (->> transfer-steps
+            (transfer-per-ssh parameters session transfer-cmd)
             (log-to console))
        (Thread/sleep WAIT-TIME))
-     (recur console session dirs parameters new-tracker))))
+     (recur console session dirs parameters new-tracker transfer-cmd transfer-steps))))
 
-(defn start-remote-routine [session asset-paths parameters]
+(defn start-remote-routine [session asset-paths parameters transfer-cmd transfer-steps]
   (let [console (async/chan)]
-    (future (sync-code-change console session asset-paths parameters))
-    (notify-log console parameters)
-    (run-command-and-forward-port session parameters)))
+    (future (sync-code-change console session asset-paths parameters transfer-cmd transfer-steps))
+    (notify-log console parameters transfer-cmd)
+    (run-command-and-forward-port session parameters transfer-cmd)))
 
 (defn session-option [parameters with-system-agent?]
   (let [default-option {:username                 (:user parameters)
@@ -244,5 +253,5 @@
           session (create-session parameters)]
       (ssh/with-connection
         session
-        (start-remote-routine session (find-asset-paths project) parameters)))
+        (start-remote-routine session (find-asset-paths project) parameters TRANSER-CMD TRANSFER-STEPS)))
     (catch Exception e (m/info "* [error] " (.getMessage e) (when verbose e)))))
