@@ -1,6 +1,6 @@
 (ns leiningen.utils-test
   (:require [clojure.test :refer :all]
-            [leiningen.remote.utils.utils :as u]))
+            [leiningen.remote.utils :as u]))
 
 (deftest ^:unit test-parse-init
   (is (= 20 (u/parse-port "20")))

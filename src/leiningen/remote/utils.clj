@@ -1,4 +1,4 @@
-(ns leiningen.remote.utils.utils
+(ns leiningen.remote.utils
   (:require [clojure.java.io :as io]
             [leiningen.core.main :as m])
   (:import (java.util Properties)))
@@ -61,3 +61,5 @@
       :empty
       (new Integer (re-find #"\d+" s)))
     (catch Exception _ :invalid)))
+
+(defn endless-loop [] (loop [] (Thread/sleep 500) (recur)))
