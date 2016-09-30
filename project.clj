@@ -6,12 +6,12 @@
 
   :dependencies [[org.clojure/tools.namespace "0.2.11" :exclusions [org.clojure/clojure]]
                  [clj-ssh "0.5.14"]
-                 [org.clojure/core.async "0.2.385"]]
+                 [org.clojure/core.async "0.2.391"]]
 
   :profiles {:uberjar {:aot :all}
              :test    {:resource-paths ["test-resources"]}
-             :dev     {:dependencies [[pjstadig/humane-test-output "0.8.0"]]
-                       :plugins      [[lein-cljfmt "0.5.3"]
+             :dev     {:dependencies [[pjstadig/humane-test-output "0.8.1"]]
+                       :plugins      [[lein-cljfmt "0.5.5"]
                                       [lein-cloverage "1.0.6"]
                                       [jonase/eastwood "0.2.3"]
                                       [lein-kibit "0.1.2"]]}})
