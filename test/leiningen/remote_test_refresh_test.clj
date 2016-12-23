@@ -284,3 +284,13 @@
 (deftest ^:unit test-remote-patch-file-path
   (is (= "parent/path/repo/test-refresh.remote.patch"
          (transfer/create-remote-patch-file-path "parent/path/" "repo"))))
+
+(deftest ^:unit pprint-test
+  (let [state (atom [])
+        print-fn (fn [& args] (swap! state conj args))]
+    (rt/pprint-parameter {:param-1 "1" :param-2 "2"} print-fn)
+    (is (= ['("\n* Starting session with the parameters:")
+            '("   " :param-1 ":" "1")
+            '("   " :param-2 ":" "2")
+            '("\n")]
+           @state))))

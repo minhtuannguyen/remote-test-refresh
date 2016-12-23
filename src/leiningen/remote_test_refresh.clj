@@ -92,16 +92,24 @@
     (notify-log console parameters transfer-cmd)
     (run-command-and-forward-port session parameters transfer-cmd)))
 
+(defn pprint-parameter
+  ([m] (pprint-parameter m (fn [& args] (apply m/info args))))
+  ([m log]
+   (log "\n* Starting session with the parameters:")
+   (doall (map (fn [[k v]] (log "   " k ":" v)) (seq m)))
+   (log "\n")))
+
 (defn create-session [parameters]
-  (m/info "\n* Starting with the parameters:" (assoc-in parameters [:auth :password] "***"))
   (let [with-system-agent? (get-in parameters [:auth :with-system-agent])
         agent (ssh/ssh-agent {:use-system-ssh-agent with-system-agent?})
         session-params (p/session-option parameters with-system-agent?)
         session (ssh/session agent (:host parameters) session-params)]
-    (m/info "* Starting session with the parameters:"
-            (-> session-params
-                (assoc :password "***")
-                (assoc :use-system-ssh-agent with-system-agent?)) "\n")
+    (-> parameters
+        (merge session-params)
+        (assoc-in [:auth :password] "***")
+        (assoc :password "***")
+        (assoc :use-system-ssh-agent with-system-agent?)
+        (pprint-parameter))
     (ssh/connect session)
     session))
 
@@ -113,4 +121,4 @@
       (ssh/with-connection
         session
         (start-remote-routine session (p/asset-paths project) parameters TRANSER-CMD TRANSFER-STEPS)))
-    (catch Exception e (m/info "* [error] " (.getMessage e) (when verbose e)))))
+    (catch Exception e (m/info "* [error] " (if verbose e (.getMessage e))))))
