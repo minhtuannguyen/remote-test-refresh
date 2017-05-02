@@ -5,8 +5,9 @@
 [![Dependencies Status](http://jarkeeper.com/minhtuannguyen/remote-test-refresh/status.svg)](http://jarkeeper.com/minhtuannguyen/remote-test-refresh)
 [![Join the chat at https://gitter.im/minhtuannguyen/remote-test-refresh](https://badges.gitter.im/minhtuannguyen/remote-test-refresh.svg)](https://gitter.im/minhtuannguyen/remote-test-refresh?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-
 [![Clojars Project](http://clojars.org/minhtuannguyen/remote-test-refresh/latest-version.svg)](https://clojars.org/minhtuannguyen/remote-test-refresh)
+
+[![](https://codescene.io/projects/1174/status.svg) Get more details at **codescene.io**.](https://codescene.io/projects/1174/jobs/latest-successful/results)
 
 `remote-test-refresh` is a leiningen plugin which uses SSH to synchronize code changes between local and remote machine automatically. When running, `remote-test-refresh` will scan code resources in the local project for changes. When detecting change, `remote-test-refresh` will transfer it per ssh and apply it to the remote repository.
 
