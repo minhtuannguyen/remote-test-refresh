@@ -50,7 +50,7 @@ if `:remote-test` can not be found in the project.clj/profiles, `remote-test-ref
 
 If `:with-system-agent` is set to false, `remote-test-refresh`  will use a separated ssh agent to connect to remote machine. In this case, `remote-test-refresh` will ask you for ssh authentication at the runtime.
 
-#Usage
+## Usage
 
 To start `remote-test-refresh` :
 
@@ -68,7 +68,7 @@ To start `remote-test-refresh` :
     ...
 
 
-#Notification
+## Notification
 
 By defining `:notify-command` you will be notified every time code change has been transferred successfully to remote machine. Currently it's tested for Mac OSX and Ubuntu.
   
@@ -94,7 +94,7 @@ On Ubuntu:
               :notify-command  ["notify-send" "Tests"]}
 ```
 
-# Issues
+## Issues
 If you have this problem under ubuntu when using system agent option:
 
      java.lang.UnsatisfiedLinkError: Unable to load library 'c': /usr/lib/x86_64-linux-gnu/libc.so: invalid ELF header
