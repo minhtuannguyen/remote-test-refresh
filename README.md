@@ -8,6 +8,7 @@
 [![Clojars Project](http://clojars.org/minhtuannguyen/remote-test-refresh/latest-version.svg)](https://clojars.org/minhtuannguyen/remote-test-refresh)
 
 [![](https://codescene.io/projects/1174/status.svg)](https://codescene.io/projects/1174/jobs/latest-successful/results)
+## Introduction
 
 `remote-test-refresh` is a leiningen plugin which uses SSH to synchronize code changes between local and remote machine automatically. When running, `remote-test-refresh` will scan code resources in the local project for changes. When detecting change, `remote-test-refresh` will transfer it per ssh and apply it to the remote repository.
 
