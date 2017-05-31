@@ -1,17 +1,17 @@
 (ns leiningen.remote-test-refresh
   (:require [clojure.tools.namespace.dir :as dir]
             [clojure.tools.namespace.track :as t]
+            [clojure.core.async :as async]
+            [clojure.java.shell :as sh]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [leiningen.remote.transfer :as transfer]
             [leiningen.remote.parameter :as p]
             [leiningen.core.main :as m]
             [leiningen.remote.utils :as u]
-            [clj-ssh.ssh :as ssh]
-            [clojure.core.async :as async]
-            [clojure.java.shell :as sh]
-            [clojure.java.io :as io]))
+            [clj-ssh.ssh :as ssh]))
 
-(def verbose false)
+(def VERBOSE false)
 (def WAIT-TIME 500)
 (def TRANSFER-STEPS [transfer/create-patch! transfer/upload-patch! transfer/apply-patch!])
 (def TRANSER-CMD {:shell        sh/sh
@@ -19,32 +19,35 @@
                   :ssh          ssh/ssh
                   :log          m/info
                   :loop         u/endless-loop
-                  :forward-port (fn [session port fun]
-                                  (ssh/with-local-port-forward [session port port] (fun)))})
+                  :forward-port (fn [session port callback]
+                                  (ssh/with-local-port-forward [session port port] (callback)))})
 
-(defn create-notify-command [notify-cmd msg]
-  (let [cmd (if (string? notify-cmd) [notify-cmd] notify-cmd)]
-    (concat cmd [(str/replace msg #"\*" "")])))
+(defn make-notify-command [notify-cmd msg]
+  (concat
+   (if (string? notify-cmd)
+     [notify-cmd]
+     notify-cmd)
+   [(str/replace msg #"\*" "")]))
 
-(defn run-cmd-remotely [ssh
-                        log
-                        {run-command :command repo :repo path :remote-path}
-                        session]
-  (let [output (->> {:cmd              (str "cd " path repo ";" run-command)
-                     :out              :stream
-                     :pty              true
-                     :agent-forwarding true}
-                    (ssh session)
-                    (:out-stream))]
-    (with-open [rdr (io/reader output)]
-      (doseq [line (line-seq rdr)] (log line)))))
+(defn make-console-reader [ssh session {:keys [command remote-path repo]}]
+  (->> {:cmd              (str "cd " remote-path repo ";" command)
+        :out              :stream
+        :pty              true
+        :agent-forwarding true}
+       (ssh session)
+       (:out-stream)
+       (io/reader)))
+
+(defn run-cmd-remotely [ssh log parameters session]
+  (with-open [rdr (make-console-reader ssh session parameters)]
+    (doseq [line (line-seq rdr)]
+      (log line))))
 
 (defn notify [shell log notify-cmd msg]
-  (let [should-notify? (not (empty? notify-cmd))]
-    (when should-notify?
-      (try
-        (apply shell (create-notify-command notify-cmd msg))
-        (catch Exception e (m/info "* Could not notify: " (.getMessage e))))))
+  (when (not (empty? notify-cmd))
+    (try
+      (apply shell (make-notify-command notify-cmd msg))
+      (catch Exception e (m/info "* Could not notify: " (.getMessage e)))))
   (log "*" msg))
 
 (defn has-port? [parameters]
@@ -121,4 +124,4 @@
       (ssh/with-connection
         session
         (start-remote-routine session (p/asset-paths project) parameters TRANSER-CMD TRANSFER-STEPS)))
-    (catch Exception e (m/info "* [error] " (if verbose e (.getMessage e))))))
+    (catch Exception e (m/info "* [error] " (if VERBOSE e (.getMessage e))))))

@@ -90,9 +90,9 @@
 
 (deftest ^:unit test-create-notify-command
   (is (= ["do notify" "msg"]
-         (rt/create-notify-command "do notify" "msg")))
+         (rt/make-notify-command "do notify" "msg")))
   (is (= ["do" "notify" "msg"]
-         (rt/create-notify-command ["do" "notify"] "msg"))))
+         (rt/make-notify-command ["do" "notify"] "msg"))))
 
 (deftest ^:unit test-has-port?
   (is (false? (rt/has-port? {:foo :bar})))
