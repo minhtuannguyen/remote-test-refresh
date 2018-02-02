@@ -6,7 +6,7 @@
 
   :dependencies [[org.clojure/tools.namespace "0.2.11" :exclusions [org.clojure/clojure]]
                  [clj-ssh "0.5.14"]
-                 [org.clojure/core.async "0.3.465"]]
+                 [org.clojure/core.async "0.4.474"]]
 
   :profiles {:uberjar {:aot :all}
              :test    {:resource-paths ["test-resources"]}
