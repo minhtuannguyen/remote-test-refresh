@@ -2,8 +2,8 @@
 
 [![Build Status](https://travis-ci.org/minhtuannguyen/remote-test-refresh.svg?branch=master)](https://travis-ci.org/minhtuannguyen/remote-test-refresh)
 [![Coverage Status](https://coveralls.io/repos/github/minhtuannguyen/remote-test-refresh/badge.svg?branch=master)](https://coveralls.io/github/minhtuannguyen/remote-test-refresh?branch=master)
-[![Dependencies Status](http://jarkeeper.com/minhtuannguyen/remote-test-refresh/status.svg)](http://jarkeeper.com/minhtuannguyen/remote-test-refresh)
-[![Downloads](https://jarkeeper.com/minhtuannguyen/remote-test-refresh/downloads.svg)](https://jarkeeper.com/minhtuannguyen/remote-test-refresh)
+[![Dependencies Status](https://versions.deps.co/minhtuannguyen/remote-test-refresh/status.svg)](https://versions.deps.co/minhtuannguyen/remote-test-refresh)
+[![Downloads](https://versions.deps.co/minhtuannguyen/remote-test-refresh/downloads.svg)](https://versions.deps.co/minhtuannguyen/remote-test-refresh)
 
 [![Clojars Project](http://clojars.org/minhtuannguyen/remote-test-refresh/latest-version.svg)](https://clojars.org/minhtuannguyen/remote-test-refresh)
 
